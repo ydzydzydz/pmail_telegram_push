@@ -113,6 +113,7 @@ func (h *PmailTelegramPushHook) buildSendText(email *parsemail.Email, setting *m
 	text += h.getBccText(email)
 	text += h.getAttachmentsText(email)
 	text += h.getSpoilerText(h.getContentText(email, setting), setting)
+	text = removeExtraSpace(text)
 
 	// 预留 20 个字符
 	maxSizeWithPadding := TELEGRAM_TEXT_MAX_SIZE - 20

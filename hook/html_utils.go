@@ -50,3 +50,10 @@ func removeHTMLTag(content string) string {
 	p.AddSpaceWhenStrippingTag(true)
 	return p.Sanitize(content)
 }
+
+// removeExtraSpace 移除多余空格
+// 删除标签时会替换为空格，多个连续空格影响显示效果
+// 多个空格替换为一个空格
+func removeExtraSpace(content string) string {
+	return regexp.MustCompile(`\s+`).ReplaceAllString(content, " ")
+}
