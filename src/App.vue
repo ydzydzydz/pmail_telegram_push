@@ -61,21 +61,21 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import resize from '@/utils/resize'
+import resizeIframeHeight from '@/utils/resize'
 
 import type { BotInfo, Setting } from '@/types'
 import { getBotInfo } from '@/api/bot'
-import { getSettingInfo, saveSettingInfo } from '@/api/setting'
+import { getSetting, updateSetting } from '@/api/setting'
 
 const saved = ref(false)
 const loading = ref(false)
 const botInfo = ref<BotInfo>({
   username: '',
-  first_name: '',
   bot_link: '',
 })
 
-const getBot = () => {
+// 获取机器人信息
+const fetchBotInfo = () => {
   loading.value = true
   getBotInfo()
     .then((response) => {
@@ -92,6 +92,7 @@ const getBot = () => {
     })
 }
 
+// 联系机器人
 const contactBot = () => {
   if (!botInfo.value?.bot_link) {
     ElMessage.error('机器人链接为空')
@@ -118,9 +119,10 @@ const rules = {
     },
   ],
 }
-const getSetting = () => {
+// 获取插件配置
+const fetchSetting = () => {
   loading.value = true
-  getSettingInfo()
+  getSetting()
     .then((response) => {
       if (response.data) {
         formData.value = response.data
@@ -135,9 +137,10 @@ const getSetting = () => {
     })
 }
 
+// 保存插件配置
 const saveSetting = () => {
   loading.value = true
-  saveSettingInfo(formData.value || {})
+  updateSetting(formData.value || {})
     .then(() => {
       saved.value = true
       ElMessage.success('设置已保存')
@@ -151,6 +154,7 @@ const saveSetting = () => {
     })
 }
 
+// 确认保存设置
 const confirmSubmit = () => {
   ElMessageBox.confirm('确认保存设置吗？', '保存设置', {
     confirmButtonText: '确定',
@@ -162,9 +166,9 @@ const confirmSubmit = () => {
 }
 
 onMounted(() => {
-  resize()
-  getBot()
-  getSetting()
+  resizeIframeHeight()
+  fetchBotInfo()
+  fetchSetting()
 })
 </script>
 

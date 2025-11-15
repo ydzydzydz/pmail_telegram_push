@@ -6,10 +6,11 @@ import (
 	"github.com/microcosm-cc/bluemonday"
 )
 
+// removeHTMLTag 移除 HTML 标签
+// 保留 Telegram 支持的标签
 // https://core.telegram.org/bots/api#sendmessage
-func RemoveHTMLTag(content string) string {
+func removeHTMLTag(content string) string {
 	p := bluemonday.NewPolicy()
-
 	p.AllowStandardURLs()
 	// <b>bold</b>
 	p.AllowElements("b")
@@ -45,15 +46,7 @@ func RemoveHTMLTag(content string) string {
 	p.AllowAttrs("class").Matching(regexp.MustCompile(`^language-[\w-]+$`)).OnElements("code")
 	// <blockquote>Block quotation started\nBlock quotation continued\nThe last line of the block quotation</blockquote>
 	p.AllowElements("blockquote")
-
-	// <tg-spoiler>spoiler</tg-spoiler>
-	// 这条测不过，因为 <tg-spoiler>spoiler</tg-spoiler> 是一个自定义的标签，不是标准的 HTML 标签
-	// p.addDefaultElementsWithoutAttrs 中没有定义
-	// p.AllowElements("tg-spoiler")
-	// <blockquote expandable>Expandable block quotation started\nExpandable block quotation continued\nExpandable block quotation continued\nHidden by default part of the block quotation started\nExpandable block quotation continued\nThe last line of the block quotation</blockquote>
-	// 这条测不过，因为 <blockquote expandable> 是一个自定义的属性，不是标准的 HTML 属性
-	// p.AllowAttrs("expandable").OnElements("blockquote")
-	// 不过也没有影响，正常邮件中不会有上述标签、属性
-
+	// 移除标签时添加空格，解决 a 标签粘在一起
+	p.AddSpaceWhenStrippingTag(true)
 	return p.Sanitize(content)
 }

@@ -1,3 +1,4 @@
+// 调整 iframe 高度
 function adjustIframeHeight() {
   try {
     const iframe = window.frameElement as HTMLIFrameElement | null
@@ -16,7 +17,8 @@ function adjustIframeHeight() {
   }
 }
 
-const resize = function () {
+// 初始化调整函数
+const resizeIframeHeight = function () {
   // 初始化
   window.addEventListener('load', adjustIframeHeight)
 
@@ -33,4 +35,4 @@ const resize = function () {
   window.addEventListener('resize', adjustIframeHeight)
 }
 
-export default resize
+export default resizeIframeHeight

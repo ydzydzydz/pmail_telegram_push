@@ -13,10 +13,13 @@ export default defineConfig({
   plugins: [
     vue(),
     vueDevTools(),
+    // 打包为单文件
     viteSingleFile(),
+    // 自动导入 Element Plus 相关函数，如：ElMessage, ElNotification 等
     AutoImport({
       resolvers: [ElementPlusResolver()],
     }),
+    // 自动导入 Element Plus 组件
     Components({
       resolvers: [ElementPlusResolver()],
     }),
@@ -27,6 +30,7 @@ export default defineConfig({
     },
   },
   build: {
+    // 输出目录
     outDir: 'hook/dist',
   },
 })

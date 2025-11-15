@@ -1,10 +1,13 @@
 import { get, post } from '@/api'
 import type { Setting, ApiResponse } from '@/types'
+import { getSettingResource, updateSettingResource } from '@/api/resource'
 
-export function getSettingInfo(): Promise<ApiResponse<Setting>> {
-  return get('settings')
+// 获取插件配置
+export function getSetting(): Promise<ApiResponse<Setting>> {
+  return get(getSettingResource)
 }
 
-export function saveSettingInfo(setting: Setting): Promise<ApiResponse<void>> {
-  return post('submit', setting)
+// 更新插件配置
+export function updateSetting(setting: Setting): Promise<ApiResponse<void>> {
+  return post(updateSettingResource, setting)
 }

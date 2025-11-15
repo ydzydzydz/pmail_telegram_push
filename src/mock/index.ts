@@ -1,58 +1,74 @@
 import Mock from 'mockjs'
 import type { ApiResponse, BotInfo, Setting } from '@/types'
-import service from '@/utils/requests'
+import {
+  pluginSettingsResource,
+  getBotInfoResource,
+  getSettingResource,
+  updateSettingResource,
+} from '@/api/resource'
 
-const baseurl = service.defaults.baseURL
+// 模拟 Telegram 机器人信息
 const Random = Mock.Random
 
+// 模拟超时时长
 Mock.setup({
   timeout: '500-1000',
 })
 
-export const botInfoMock = Mock.mock(baseurl + 'bot', 'get', () => {
-  const botInfo: ApiResponse<BotInfo> = {
-    code: 0,
-    message: 'success',
-    data: {
-      username: Random.string('lower', 10),
-      first_name: Random.string('lower', 10),
-      bot_link: Random.string('lower', 10),
-    },
-  }
-  console.log('botInfo mock response', botInfo)
-  return botInfo
-})
+// 模拟获取 Telegram 机器人信息
+export const getBotInfoMock = Mock.mock(
+  `${pluginSettingsResource}/${getBotInfoResource}`,
+  'get',
+  () => {
+    const botInfo: ApiResponse<BotInfo> = {
+      code: 0,
+      message: '获取 Telegram 机器人信息成功',
+      data: {
+        username: Random.string('lower', 10),
+        bot_link: Random.string('lower', 10),
+      },
+    }
+    // console.log('getBotInfo mock response', botInfo)
+    return botInfo
+  },
+)
 
-export const settingMock = Mock.mock(baseurl + 'settings', 'get', () => {
-  const setting: ApiResponse<Setting> = {
-    code: 0,
-    message: 'success',
-    data: {
-      chat_id: Random.string('number', 9),
-      show_content: Random.boolean(),
-      spoiler_content: Random.boolean(),
-      send_attachments: Random.boolean(),
-      disable_link_preview: Random.boolean(),
-    },
-  }
-  console.log('setting mock response', setting)
-  return setting
-})
+// 模拟获取设置信息
+export const getSettingMock = Mock.mock(
+  `${pluginSettingsResource}/${getSettingResource}`,
+  'get',
+  () => {
+    const setting: ApiResponse<Setting> = {
+      code: 0,
+      message: '获取设置信息成功',
+      data: {
+        chat_id: Random.string('number', 9),
+        show_content: Random.boolean(),
+        spoiler_content: Random.boolean(),
+        send_attachments: Random.boolean(),
+        disable_link_preview: Random.boolean(),
+      },
+    }
+    // console.log('getSetting mock response', setting)
+    return setting
+  },
+)
 
-export const submitMock = Mock.mock(baseurl + 'submit', 'post', (options) => {
-  console.log('submit options', options)
-  const code = Random.integer(0, -1)
-  const message = code === 0 ? 'success' : 'error'
-  const setting: ApiResponse<Setting> = {
-    code,
-    message,
-  }
-  console.log('submit mock response', setting)
-  return setting
-})
+// 模拟更新设置信息
+export const updateSettingMock = Mock.mock(
+  `${pluginSettingsResource}/${updateSettingResource}`,
+  'post',
+  (_) => {
+    // console.log('updateSetting options', options)
+    const code = Random.integer(0, -1) // 0 表示成功，其他值表示失败
+    const message = code === 0 ? '更新设置信息成功' : '更新设置信息失败'
+    const setting: ApiResponse<Setting> = {
+      code,
+      message,
+    }
+    // console.log('updateSetting mock response', setting)
+    return setting
+  },
+)
 
-export default {
-  botInfoMock,
-  settingMock,
-  submitMock,
-}
+export default { getBotInfoMock, getSettingMock, updateSettingMock }

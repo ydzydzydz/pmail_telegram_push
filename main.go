@@ -3,15 +3,15 @@ package main
 import (
 	"github.com/Jinnrry/pmail/hooks/framework"
 	"github.com/ydzydzydz/pmail_telegram_push/config"
-	"github.com/ydzydzydz/pmail_telegram_push/db"
 	"github.com/ydzydzydz/pmail_telegram_push/hook"
 )
 
 func main() {
-	config := config.ReadConfig()
-	db.Init(config.MainConfig)
+	// 读取配置
+	cfg := config.ReadConfig()
+	// 启动插件
 	framework.CreatePlugin(
 		hook.PLUGIN_NAME,
-		hook.NewPmailTelegramPushHook(config),
+		hook.NewPmailTelegramPushHook(cfg),
 	).Run()
 }

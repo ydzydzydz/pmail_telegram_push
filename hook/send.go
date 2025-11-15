@@ -6,18 +6,129 @@ import (
 	"errors"
 	"fmt"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/Jinnrry/pmail/dto/parsemail"
 	"github.com/go-telegram/bot"
 	"github.com/go-telegram/bot/models"
-	"github.com/ydzydzydz/pmail_telegram_push/logger"
 	"github.com/ydzydzydz/pmail_telegram_push/model"
 )
 
-const TEXT_MAX_SIZE = 4096
+// TelegramTextMaxSize Telegram 文本最大长度
+const TELEGRAM_TEXT_MAX_SIZE = 4096
 
-func (h *PmailTelegramPushHook) getWebButton() *models.InlineKeyboardMarkup {
+// getSubjectText 获取主题文本
+func (h *PmailTelegramPushHook) getSubjectText(email *parsemail.Email) string {
+	if len(email.Subject) <= 0 {
+		return ""
+	}
+	return fmt.Sprintf("🔖 主题：<b>%s</b>\n", email.Subject)
+}
+
+// getFromText 获取发件人文本
+func (h *PmailTelegramPushHook) getFromText(email *parsemail.Email) string {
+	if len(email.From.EmailAddress) <= 0 {
+		return ""
+	}
+	return fmt.Sprintf("📤 发件：&#60;%s&#62;\n", email.From.EmailAddress)
+}
+
+// getToText 获取收件人文本
+func (h *PmailTelegramPushHook) getToText(email *parsemail.Email) string {
+	if len(email.To) <= 0 {
+		return ""
+	}
+	text := "📥 收件："
+	for _, to := range email.To {
+		text += fmt.Sprintf("&#60;%s&#62; ", to.EmailAddress)
+	}
+	text += "\n"
+	return text
+}
+
+// getCcText 获取抄送人文本
+func (h *PmailTelegramPushHook) getCcText(email *parsemail.Email) string {
+	if len(email.Cc) <= 0 {
+		return ""
+	}
+	text := "📋 抄送："
+	for _, cc := range email.Cc {
+		text += fmt.Sprintf("&#60;%s&#62; ", cc.EmailAddress)
+	}
+	text += "\n"
+	return text
+}
+
+// getBccText 获取密送人文本
+func (h *PmailTelegramPushHook) getBccText(email *parsemail.Email) string {
+	if len(email.Bcc) <= 0 {
+		return ""
+	}
+	text := "🕵️ 密送："
+	for _, bcc := range email.Bcc {
+		text += fmt.Sprintf("&#60;%s&#62; ", bcc.EmailAddress)
+	}
+	text += "\n"
+	return text
+}
+
+// getAttachmentsText 获取附件文本
+func (h *PmailTelegramPushHook) getAttachmentsText(email *parsemail.Email) string {
+	if len(email.Attachments) <= 0 {
+		return ""
+	}
+	return fmt.Sprintf("📎 附件：%d 个\n", len(email.Attachments))
+}
+
+// getContentText 获取邮件内容文本
+func (h *PmailTelegramPushHook) getContentText(email *parsemail.Email, setting *model.TelegramPushSetting) string {
+	if !setting.ShowContent {
+		return ""
+	}
+	if len(email.Text) > 0 {
+		return string(email.Text)
+	}
+	if len(email.HTML) > 0 {
+		return removeHTMLTag(string(email.HTML))
+	}
+	return ""
+}
+
+// getSpoilerText 获取spoiler文本
+func (h *PmailTelegramPushHook) getSpoilerText(text string, setting *model.TelegramPushSetting) string {
+	if !setting.SpoilerContent {
+		return text
+	}
+	return fmt.Sprintf("<tg-spoiler>%s</tg-spoiler>", text)
+}
+
+// buildSendText 构建发送文本
+func (h *PmailTelegramPushHook) buildSendText(email *parsemail.Email, setting *model.TelegramPushSetting) string {
+	text := "📧 有新邮件\n"
+	text += h.getSubjectText(email)
+	text += h.getFromText(email)
+	text += h.getToText(email)
+	text += h.getCcText(email)
+	text += h.getBccText(email)
+	text += h.getAttachmentsText(email)
+	text += h.getSpoilerText(h.getContentText(email, setting), setting)
+
+	// 预留 20 个字符
+	maxSizeWithPadding := TELEGRAM_TEXT_MAX_SIZE - 20
+	if len(text) > maxSizeWithPadding {
+		// 如果在预留长度内没有 spoiler 起始标签，直接截取
+		if !strings.Contains(text[:maxSizeWithPadding], "<tg-spoiler>") {
+			return text[:maxSizeWithPadding] + "..."
+		}
+		// 如果在预留长度内有 spoiler 起始标签，末尾添加结束标签
+		return text[:maxSizeWithPadding] + "..." + "</tg-spoiler>"
+	}
+	return text
+}
+
+// buildPamilLinkButton 创建Pamil链接按钮
+func (h *PmailTelegramPushHook) buildPamilLinkButton() *models.InlineKeyboardMarkup {
 	var url string
 	if h.mainConfig.HttpsEnabled > 1 {
 		url = "http://" + h.mainConfig.WebDomain
@@ -37,81 +148,16 @@ func (h *PmailTelegramPushHook) getWebButton() *models.InlineKeyboardMarkup {
 	}
 }
 
-// func removeHTMLTags(text string) string {
-// 	re := regexp.MustCompile("<.*?>")
-// 	return re.ReplaceAllString(text, " ")
-// }
-
-func (h *PmailTelegramPushHook) getText(email *parsemail.Email, setting *model.TelegramPushSetting) (text string) {
-	text = "📧 有新邮件\n"
-	text += fmt.Sprintf("🔖 主题：<b>%s</b>\n", email.Subject)
-	text += fmt.Sprintf("📤 发件：&#60;%s&#62;\n", email.From.EmailAddress)
-	if len(email.To) > 0 {
-		text += "📥 收件："
-		for _, to := range email.To {
-			text += fmt.Sprintf("&#60;%s&#62; ", to.EmailAddress)
-		}
-		text += "\n"
-	}
-	if len(email.Cc) > 0 {
-		text += "📋 抄送："
-		for _, cc := range email.Cc {
-			text += fmt.Sprintf("&#60;%s&#62; ", cc.EmailAddress)
-		}
-		text += "\n"
-	}
-	if len(email.Bcc) > 0 {
-		text += "🕵️ 密送："
-		for _, bcc := range email.Bcc {
-			text += fmt.Sprintf("&#60;%s&#62; ", bcc.EmailAddress)
-		}
-		text += "\n"
-	}
-	if len(email.Attachments) > 0 {
-		text += fmt.Sprintf("📎 附件：%d 个\n", len(email.Attachments))
-	}
-
-	if setting.ShowContent {
-		size := TEXT_MAX_SIZE - len(text) - 100
-		if size <= 0 {
-			logger.PluginLogger.Warn().Int("text_size", size).Msg("text size too large")
-			return
-		}
-
-		var emailContent string
-		if len(email.Text) > 0 {
-			if len(email.Text) > size {
-				emailContent = fmt.Sprintf("%s...", string(email.Text[:size]))
-			} else {
-				emailContent = string(email.Text)
-			}
-		} else if len(email.HTML) > 0 {
-			if len(email.HTML) > size {
-				emailContent = fmt.Sprintf("%s...", RemoveHTMLTag(string(email.HTML))[:size])
-			} else {
-				emailContent = RemoveHTMLTag(string(email.HTML))
-			}
-		}
-		if len(emailContent) > 0 && setting.SpoilerContent {
-			emailContent = fmt.Sprintf("<tg-spoiler>%s</tg-spoiler>", emailContent)
-		}
-		if len(emailContent) > 0 {
-			text += fmt.Sprintf("%s\n", emailContent)
-		}
-	}
-
-	return
-}
-
-func (h *PmailTelegramPushHook) sendNotification(email *parsemail.Email, setting *model.TelegramPushSetting) (msg *models.Message, err error) {
+// sendText 发送文本消息
+func (h *PmailTelegramPushHook) sendText(email *parsemail.Email, setting *model.TelegramPushSetting) (msg *models.Message, err error) {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(h.pluginConfig.Timeout)*time.Second)
 	defer cancel()
 
 	parmas := &bot.SendMessageParams{
 		ChatID:      setting.ChatID,
-		Text:        h.getText(email, setting),
+		Text:        h.buildSendText(email, setting),
 		ParseMode:   models.ParseModeHTML,
-		ReplyMarkup: h.getWebButton(),
+		ReplyMarkup: h.buildPamilLinkButton(),
 		LinkPreviewOptions: &models.LinkPreviewOptions{
 			IsDisabled: &setting.DisableLinkPreview,
 		},
@@ -120,10 +166,12 @@ func (h *PmailTelegramPushHook) sendNotification(email *parsemail.Email, setting
 	return h.bot.SendMessage(ctx, parmas)
 }
 
-func (h *PmailTelegramPushHook) sendAttachments(id int, email *parsemail.Email, setting *model.TelegramPushSetting) (msg *models.Message, err error) {
+// sendAttachments 发送附件消息
+func (h *PmailTelegramPushHook) sendAttachments(id int, email *parsemail.Email, setting *model.TelegramPushSetting) (errs error) {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(h.pluginConfig.Timeout)*time.Second)
 	defer cancel()
 
+	// 引用消息中包含附件关键字
 	params := &bot.SendDocumentParams{
 		ChatID: setting.ChatID,
 		ReplyParameters: &models.ReplyParameters{
@@ -132,19 +180,30 @@ func (h *PmailTelegramPushHook) sendAttachments(id int, email *parsemail.Email, 
 		},
 	}
 
+	// 逐个发送附件
 	for i, attachment := range email.Attachments {
 		params.Caption = fmt.Sprintf("📎 附件 %d", i+1)
 		params.Document = &models.InputFileUpload{
 			Filename: filepath.Base(attachment.Filename),
 			Data:     bytes.NewReader(attachment.Content),
 		}
-
-		if msg, err = h.bot.SendDocument(ctx, params); err != nil {
-			err = errors.Join(err, fmt.Errorf("send document failed, err: %w", err))
+		// 发送附件失败，记录错误，继续发送下一个附件
+		if _, err := h.bot.SendDocument(ctx, params); err != nil {
+			errs = errors.Join(err, fmt.Errorf("send document failed, err: %w", err))
 			continue
 		}
 	}
 	return
+}
+
+// sendNotification 发送通知消息
+// 先发送文本消息，再发送附件消息
+func (h *PmailTelegramPushHook) sendNotification(email *parsemail.Email, setting *model.TelegramPushSetting) (err error) {
+	msg, err := h.sendText(email, setting)
+	if err != nil {
+		return err
+	}
+	return h.sendAttachments(msg.ID, email, setting)
 }
 
 // TODO: 合并多个附件为一个消息发送

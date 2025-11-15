@@ -13,18 +13,21 @@ const (
 	PLUGIN_CONFIG_FILE = "./config/pmail_telegram_push_config.json"
 )
 
+// PluginConfig 插件配置
 type PluginConfig struct {
-	TelegramBotToken string `json:"telegram_bot_token"`
-	Proxy            string `json:"proxy" default:""`
-	Timeout          int    `json:"timeout" default:"30"`
-	Debug            bool   `json:"debug" default:"false"`
+	TelegramBotToken string `json:"telegram_bot_token"`    // Telegram机器人Token
+	Proxy            string `json:"proxy" default:""`      // 代理地址
+	Timeout          int    `json:"timeout" default:"30"`  // 超时时间
+	Debug            bool   `json:"debug" default:"false"` // 调试模式
 }
 
+// Config 配置
 type Config struct {
 	PluginConfig *PluginConfig
 	MainConfig   *pconfig.Config
 }
 
+// readMainConfig 读取主配置文件
 func readMainConfig() *pconfig.Config {
 	content, err := os.ReadFile(MAIN_CONFIG_FILE)
 	if err != nil {
@@ -38,6 +41,7 @@ func readMainConfig() *pconfig.Config {
 	return &mainConfig
 }
 
+// readPluginConfig 读取插件配置文件
 func readPluginConfig() *PluginConfig {
 	content, err := os.ReadFile(PLUGIN_CONFIG_FILE)
 	if err != nil {
@@ -54,6 +58,7 @@ func readPluginConfig() *PluginConfig {
 	return &pluginConfig
 }
 
+// ReadConfig 读取配置
 func ReadConfig() *Config {
 	return &Config{
 		PluginConfig: readPluginConfig(),
