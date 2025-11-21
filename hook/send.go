@@ -3,7 +3,6 @@ package hook
 import (
 	"bytes"
 	"context"
-	"errors"
 	"fmt"
 	"path/filepath"
 	"strings"
@@ -15,8 +14,11 @@ import (
 	"github.com/ydzydzydz/pmail_telegram_push/model"
 )
 
-// TelegramTextMaxSize Telegram 文本最大长度
-const TELEGRAM_TEXT_MAX_SIZE = 4096
+const (
+	TELEGRAM_TEXT_MAX_SIZE        = 4096             // TELEGRAM_TEXT_MAX_SIZE Telegram 文本最大长度
+	TELEGRAM_ATTACHMENT_MAX_COUNT = 10               // TELEGRAM_ATTACHMENT_MAX_COUNT Telegram 附件最大数量
+	TELEGRAM_ATTACHMENT_MAX_SIZE  = 20 * 1024 * 1024 // TELEGRAM_ATTACHMENT_MAX_SIZE Telegram 附件最大大小
+)
 
 // getSubjectText 获取主题文本
 func (h *PmailTelegramPushHook) getSubjectText(email *parsemail.Email) string {
@@ -167,36 +169,6 @@ func (h *PmailTelegramPushHook) sendText(email *parsemail.Email, setting *model.
 	return h.bot.SendMessage(ctx, parmas)
 }
 
-// sendAttachments 发送附件消息
-func (h *PmailTelegramPushHook) sendAttachments(id int, email *parsemail.Email, setting *model.TelegramPushSetting) (errs error) {
-	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(h.pluginConfig.Timeout)*time.Second)
-	defer cancel()
-
-	// 引用消息中包含附件关键字
-	params := &bot.SendDocumentParams{
-		ChatID: setting.ChatID,
-		ReplyParameters: &models.ReplyParameters{
-			MessageID: id,
-			Quote:     fmt.Sprintf("📎 附件：%d 个", len(email.Attachments)),
-		},
-	}
-
-	// 逐个发送附件
-	for i, attachment := range email.Attachments {
-		params.Caption = fmt.Sprintf("📎 附件 %d", i+1)
-		params.Document = &models.InputFileUpload{
-			Filename: filepath.Base(attachment.Filename),
-			Data:     bytes.NewReader(attachment.Content),
-		}
-		// 发送附件失败，记录错误，继续发送下一个附件
-		if _, err := h.bot.SendDocument(ctx, params); err != nil {
-			errs = errors.Join(err, fmt.Errorf("send document failed, err: %w", err))
-			continue
-		}
-	}
-	return
-}
-
 // sendNotification 发送通知消息
 // 先发送文本消息，再发送附件消息
 func (h *PmailTelegramPushHook) sendNotification(email *parsemail.Email, setting *model.TelegramPushSetting) (err error) {
@@ -204,26 +176,49 @@ func (h *PmailTelegramPushHook) sendNotification(email *parsemail.Email, setting
 	if err != nil {
 		return err
 	}
-	return h.sendAttachments(msg.ID, email, setting)
+	return h.sendAttachmentsBatch(msg.ID, email, setting)
 }
 
-// TODO: 合并多个附件为一个消息发送
-// func (h *PmailTelegramPushHook) sendAttachmentsCombine(id int, email *parsemail.Email) (msg []*models.Message, err error) {
-// 	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(h.pluginConfig.Timeout)*time.Second)
-// 	defer cancel()
-// 	params := &bot.SendMediaGroupParams{
-// 		ChatID: h.pluginConfig.TelegramChatID,
-// 		ReplyParameters: &models.ReplyParameters{
-// 			MessageID: id,
-// 			Quote:     fmt.Sprintf("📎 附件：%d 个", len(email.Attachments)),
-// 		},
-// 	}
-// 	for i, attachment := range email.Attachments {
-// 		params.Media = append(params.Media, &models.InputMediaDocument{
-// 			Media:           filepath.Base(attachment.Filename),
-// 			Caption:         fmt.Sprintf("📎 附件 %d", i+1),
-// 			MediaAttachment: bytes.NewReader(attachment.Content),
-// 		})
-// 	}
-// 	return h.bot.SendMediaGroup(ctx, params)
-// }
+// sendAttachmentsBatch 批量发送附件消息
+func (h *PmailTelegramPushHook) sendAttachmentsBatch(id int, email *parsemail.Email, setting *model.TelegramPushSetting) (err error) {
+	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(h.pluginConfig.Timeout)*time.Second)
+	defer cancel()
+
+	// 引用消息中包含附件关键字
+	params := &bot.SendMediaGroupParams{
+		ChatID: setting.ChatID,
+		ReplyParameters: &models.ReplyParameters{
+			MessageID: id,
+			Quote:     fmt.Sprintf("📎 附件：%d 个", len(email.Attachments)),
+		},
+	}
+
+	// 批量发送附件, 每个批次最多 TELEGRAM_ATTACHMENT_MAX_COUNT 个附件
+	for i := 0; i < len(email.Attachments); i += TELEGRAM_ATTACHMENT_MAX_COUNT {
+		end := min(len(email.Attachments), i+TELEGRAM_ATTACHMENT_MAX_COUNT)
+		params.Media = nil
+		batch := email.Attachments[i:end]
+		for j, attachment := range batch {
+			// 判断文件大小, 超过最大大小则跳过
+			if len(attachment.Content) > TELEGRAM_ATTACHMENT_MAX_SIZE {
+				continue
+			}
+			// 构建 InputMediaDocument
+			params.Media = append(params.Media, &models.InputMediaDocument{
+				Media:           fmt.Sprintf("attach://%s", filepath.Base(attachment.Filename)),
+				Caption:         fmt.Sprintf("📎 附件 %d", i+j+1),
+				MediaAttachment: bytes.NewReader(attachment.Content),
+			})
+		}
+		if len(params.Media) == 0 {
+			continue
+		}
+		if _, err = h.bot.SendMediaGroup(ctx, params); err != nil {
+			return err
+		}
+		// 每个批次发送后休息 1 秒, 避免触发速率限制
+		time.Sleep(time.Second)
+	}
+
+	return nil
+}

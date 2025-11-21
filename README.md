@@ -18,15 +18,23 @@
 1.  **编译插件**：
 
     ```bash
-    go build
+    CGO_ENABLED=0 go build -o pmail_telegram_push
     ```
 
 2.  **复制插件**：
     将编译好的 `pmail_telegram_push` 文件复制到 Pmail 的 `plugins` 目录下。
 
     ```bash
-    cp ./pmail_telegram_push ./plugins/
+    cp -v ./pmail_telegram_push ./plugins/pmail_telegram_push
     ```
+
+3.  **添加权限**：
+    为插件添加可执行权限。
+
+    ```bash
+    chmod +x ./plugins/pmail_telegram_push
+    ```
+
 
 ## ⚙️ 配置
 
