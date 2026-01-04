@@ -35,27 +35,55 @@
         </el-form-item>
 
         <el-form-item label="显示邮件内容">
-          <el-switch v-model="formData.show_content" />
+          <el-switch
+            v-model="formData.show_content"
+            :disabled="formData.chat_id.trim().length === 0"
+          />
         </el-form-item>
 
         <el-form-item label="邮件内容防剧透">
-          <el-switch v-model="formData.spoiler_content" />
+          <el-switch
+            v-model="formData.spoiler_content"
+            :disabled="formData.chat_id.trim().length === 0"
+          />
         </el-form-item>
 
         <el-form-item label="发送附件">
-          <el-switch v-model="formData.send_attachments" />
+          <el-switch
+            v-model="formData.send_attachments"
+            :disabled="formData.chat_id.trim().length === 0"
+          />
         </el-form-item>
 
         <el-form-item label="禁用链接预览">
-          <el-switch v-model="formData.disable_link_preview" />
+          <el-switch
+            v-model="formData.disable_link_preview"
+            :disabled="formData.chat_id.trim().length === 0"
+          />
         </el-form-item>
       </el-form>
 
       <el-form-item>
-        <el-button type="primary" @click="confirmSubmit" :disabled="loading" style="margin: 0 auto">
-          <SaveIcon class="icon" />
-          保存设置
-        </el-button>
+        <div class="form-item-buttons">
+          <el-button
+            type="success"
+            :disabled="loading || formData.chat_id.trim().length === 0"
+            style="margin: 0 auto"
+            @click="postTestMessage"
+          >
+            <LinkIcon class="icon" />
+            测试消息
+          </el-button>
+          <el-button
+            type="primary"
+            @click="confirmSubmit"
+            :disabled="loading"
+            style="margin: 0 auto"
+          >
+            <SaveIcon class="icon" />
+            保存设置
+          </el-button>
+        </div>
       </el-form-item>
     </el-card>
   </div>
@@ -67,8 +95,9 @@ import resizeIframeHeight from '@/utils/resize'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import SaveIcon from '@/assets/icons/save-line.svg'
 import TelegramIcon from '@/assets/icons/telegram.svg'
+import LinkIcon from '@/assets/icons/link.svg'
 import type { BotInfo, Setting } from '@/types'
-import { getBotInfo } from '@/api/bot'
+import { getBotInfo, testMessage } from '@/api/bot'
 import { getSetting, updateSetting } from '@/api/setting'
 
 const saved = ref(false)
@@ -169,6 +198,30 @@ const confirmSubmit = () => {
   })
 }
 
+const postTestMessage = () => {
+  loading.value = true
+  if (!formData.value.chat_id) {
+    ElMessage.error('请输入 Chat ID')
+    return
+  }
+  testMessage(formData.value)
+    .then((response) => {
+      if (response.code === 0) {
+        ElMessage.success(response.message)
+        saved.value = true
+      } else {
+        ElMessage.error(response.message)
+      }
+    })
+    .catch((error) => {
+      ElMessage.error('测试消息失败')
+      console.error(error)
+    })
+    .finally(() => {
+      loading.value = false
+    })
+}
+
 onMounted(() => {
   resizeIframeHeight()
   fetchBotInfo()
@@ -198,5 +251,14 @@ onMounted(() => {
   height: 20px;
   vertical-align: middle;
   color: white;
+}
+
+.form-item-buttons {
+  margin-top: 20px;
+  margin: 0 auto;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 20px;
 }
 </style>

@@ -125,6 +125,9 @@ func (h *PmailTelegramPushHook) SettingsHtml(ctx *context.Context, url string, r
 	// 更新设置
 	case strings.Contains(url, "updateSetting"):
 		return h.updateSetting(ctx.UserID, requestData)
+	// 测试消息
+	case strings.Contains(url, "testMessage"):
+		return h.testMessage(ctx.UserID, requestData)
 	default:
 		return SettingHtml
 	}

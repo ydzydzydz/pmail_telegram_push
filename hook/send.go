@@ -222,3 +222,14 @@ func (h *PmailTelegramPushHook) sendAttachmentsBatch(id int, email *parsemail.Em
 
 	return nil
 }
+
+func (h *PmailTelegramPushHook) sendTestMessage(setting *model.TelegramPushSetting) (msg *models.Message, err error) {
+	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(h.pluginConfig.Timeout)*time.Second)
+	defer cancel()
+	parmas := &bot.SendMessageParams{
+		ChatID:    setting.ChatID,
+		Text:      "这是一条测试消息",
+		ParseMode: models.ParseModeHTML,
+	}
+	return h.bot.SendMessage(ctx, parmas)
+}

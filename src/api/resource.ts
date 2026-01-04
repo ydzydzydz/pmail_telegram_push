@@ -11,3 +11,5 @@ export const getSettingResource = 'getSetting'
 export const updateSettingResource = 'updateSetting'
 // 获取机器人信息资源
 export const getBotInfoResource = 'getBotInfo'
+// 测试消息资源
+export const testMessageResource = 'testMessage'

@@ -5,6 +5,7 @@ import {
   getBotInfoResource,
   getSettingResource,
   updateSettingResource,
+  testMessageResource,
 } from '@/api/resource'
 
 // 模拟 Telegram 机器人信息
@@ -71,4 +72,21 @@ export const updateSettingMock = Mock.mock(
   },
 )
 
-export default { getBotInfoMock, getSettingMock, updateSettingMock }
+// 模拟测试消息
+export const testMessageMock = Mock.mock(
+  `${pluginSettingsResource}/${testMessageResource}`,
+  'post',
+  (_) => {
+    // console.log('testMessage options', options)
+    const code = Random.integer(0, -1) // 0 表示成功，其他值表示失败
+    const message = code === 0 ? '测试消息成功' : '测试消息失败'
+    const setting: ApiResponse<void> = {
+      code,
+      message,
+    }
+    // console.log('testMessage mock response', setting)
+    return setting
+  },
+)
+
+export default { getBotInfoMock, getSettingMock, updateSettingMock, testMessageMock }
