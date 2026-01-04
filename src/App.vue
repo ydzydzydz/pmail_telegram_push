@@ -89,32 +89,31 @@
           </el-button>
         </div>
       </el-form-item>
-      <el-tour
-        v-model="tourOpen"
-        @finish="finishTour"
-        @close="finishTour"
-      >
-       <el-tour-step
-        target="#chat_id"
-        title="第一步"
-        description="请输入 Chat ID， 置空则禁用推送"
-      />
-      <el-tour-step
-        target="#contact_bot_button"
-        title="联系机器人"
-        description="点击联系机器人按钮，与机器人进行一次交互。"
-      />
-      <el-tour-step
-        target="#test_message_button"
-        title="测试消息"
-        description="点击测试消息按钮，测试当前配置是否有效。"
-      />
-      <el-tour-step
-        target="#save_button"
-        title="保存设置"
-        description="点击保存设置按钮，保存当前配置。"
-      />
-    </el-tour>
+      <el-tour v-model="tourOpen" @finish="finishTour" @close="finishTour">
+        <el-tour-step
+          target="#chat_id"
+          title="第一步"
+          description="请输入 Chat ID， 置空则禁用推送"
+        />
+        <el-tour-step
+          target="#contact_bot_button"
+          title="第二步"
+          description="点击联系机器人按钮，与机器人进行一次交互。"
+        />
+        <el-tour-step
+          target="#test_message_button"
+          title="第三步"
+          description="点击测试消息按钮，测试是否能成功发送消息。"
+        />
+        <el-tour-step
+          target="#save_button"
+          title="第四步"
+          description="点击保存设置按钮，保存当前配置。"
+        />
+        <template #indicators="{ current, total }">
+          <span>{{ current + 1 }} / {{ total }}</span>
+        </template>
+      </el-tour>
     </el-card>
   </div>
 </template>
