@@ -18,6 +18,8 @@ declare module 'vue' {
     ElFormItem: typeof import('element-plus/es')['ElFormItem']
     ElInput: typeof import('element-plus/es')['ElInput']
     ElSwitch: typeof import('element-plus/es')['ElSwitch']
+    ElTour: typeof import('element-plus/es')['ElTour']
+    ElTourStep: typeof import('element-plus/es')['ElTourStep']
   }
   export interface GlobalDirectives {
     vLoading: typeof import('element-plus/es')['ElLoadingDirective']

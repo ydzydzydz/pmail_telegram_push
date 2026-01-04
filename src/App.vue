@@ -11,6 +11,7 @@
                 :disabled="!botInfo?.bot_link"
                 @click="contactBot"
                 style="float: right"
+                id="contact_bot_button"
               >
                 <TelegramIcon class="icon" />
                 联系机器人
@@ -31,6 +32,7 @@
           <el-input
             v-model="formData.chat_id"
             placeholder="请输入 Telegram Chat ID，置空则禁用推送"
+            id="chat_id"
           />
         </el-form-item>
 
@@ -70,6 +72,7 @@
             :disabled="loading || formData.chat_id.trim().length === 0"
             style="margin: 0 auto"
             @click="postTestMessage"
+            id="test_message_button"
           >
             <LinkIcon class="icon" />
             测试消息
@@ -79,12 +82,39 @@
             @click="confirmSubmit"
             :disabled="loading"
             style="margin: 0 auto"
+            id="save_button"
           >
             <SaveIcon class="icon" />
             保存设置
           </el-button>
         </div>
       </el-form-item>
+      <el-tour
+        v-model="tourOpen"
+        @finish="finishTour"
+        @close="finishTour"
+      >
+       <el-tour-step
+        target="#chat_id"
+        title="第一步"
+        description="请输入 Chat ID， 置空则禁用推送"
+      />
+      <el-tour-step
+        target="#contact_bot_button"
+        title="联系机器人"
+        description="点击联系机器人按钮，与机器人进行一次交互。"
+      />
+      <el-tour-step
+        target="#test_message_button"
+        title="测试消息"
+        description="点击测试消息按钮，测试当前配置是否有效。"
+      />
+      <el-tour-step
+        target="#save_button"
+        title="保存设置"
+        description="点击保存设置按钮，保存当前配置。"
+      />
+    </el-tour>
     </el-card>
   </div>
 </template>
@@ -222,7 +252,17 @@ const postTestMessage = () => {
     })
 }
 
+const tourOpen = ref(false)
+const finishTour = () => {
+  localStorage.setItem('hasShownTour', 'true')
+  console.log('tour finished')
+}
+
 onMounted(() => {
+  const hasShown = localStorage.getItem('hasShownTour') === 'true'
+  if (!hasShown) {
+    tourOpen.value = true
+  }
   resizeIframeHeight()
   fetchBotInfo()
   fetchSetting()
