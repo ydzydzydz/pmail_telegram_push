@@ -38,7 +38,7 @@
 
 ## ⚙️ 配置
 
-在 Pmail 的 `config` 目录下，创建或编辑 `pmail_telegram_push.json` 文件，并填入以下配置：
+在 Pmail 的 `config` 目录下，创建或编辑 `pmail_telegram_push_config.json` 文件，并填入以下配置：
 
 ```json
 {
