@@ -32,13 +32,13 @@ func removeHTMLTag(content string) string {
 	// <del>strikethrough</del>
 	p.AllowElements("del")
 	// <span class="tg-spoiler">spoiler</span>
-	p.AllowAttrs("class").Matching(regexp.MustCompile(`^tg-spoiler$`)).OnElements("span")
+	// p.AllowAttrs("class").Matching(regexp.MustCompile(`^tg-spoiler$`)).OnElements("span")
 	// <a href="http://www.example.com/">inline URL</a>
 	p.AllowAttrs("href").OnElements("a")
 	p.RequireNoFollowOnLinks(false)
 	p.AllowURLSchemes("http", "https", "tg")
 	// <tg-emoji emoji-id="5368324170671202286">👍</tg-emoji>
-	p.AllowAttrs("emoji-id").Matching(regexp.MustCompile(`^\d+$`)).OnElements("tg-emoji")
+	// p.AllowAttrs("emoji-id").Matching(regexp.MustCompile(`^\d+$`)).OnElements("tg-emoji")
 	// <code>inline fixed-width code</code>
 	p.AllowElements("code")
 	// <pre>pre-formatted fixed-width code block</pre>
