@@ -1,5 +1,6 @@
 package hook
 
+// Status 状态类型，用于表示邮件状态枚举
 type Status int8
 
 const (

@@ -25,10 +25,12 @@ func NewBotInfo(username string) BotInfo {
 	}
 }
 
+// BotController 机器人控制器
 type BotController struct {
 	sender *sender.TelegramBotSender
 }
 
+// NewBotController 创建机器人控制器
 func NewBotController(sender *sender.TelegramBotSender) *BotController {
 	return &BotController{
 		sender: sender,

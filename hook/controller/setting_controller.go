@@ -4,8 +4,6 @@ import (
 	"encoding/json"
 	"strings"
 
-	_ "embed"
-
 	"github.com/ydzydzydz/pmail_telegram_push/hook/controller/response"
 	"github.com/ydzydzydz/pmail_telegram_push/hook/logger"
 	"github.com/ydzydzydz/pmail_telegram_push/hook/model"

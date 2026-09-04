@@ -36,7 +36,9 @@ type PmailTelegramPushHook struct {
 	sender            *sender.TelegramBotSender
 }
 
-// NewPmailTelegramPushHook 创建插件钩子
+var _ framework.EmailHook = (*PmailTelegramPushHook)(nil)
+
+// NewPmailTelegramPushHook 创建插件钩子实例
 func NewPmailTelegramPushHook(cfg *config.Config) *PmailTelegramPushHook {
 	dataSource, err := db.NewDataSource(cfg)
 	if err != nil {
@@ -47,9 +49,9 @@ func NewPmailTelegramPushHook(cfg *config.Config) *PmailTelegramPushHook {
 
 	sender, err := sender.NewTelegramBotSender(cfg)
 	if err != nil {
-		logger.PluginLogger.Fatal().Err(err).Msg("创建sender失败")
+		logger.PluginLogger.Fatal().Err(err).Msg("创建Telegram Bot发送器失败")
 	}
-	logger.PluginLogger.Info().Msg("sender初始化成功")
+	logger.PluginLogger.Info().Msg("Telegram Bot发送器初始化成功")
 
 	return &PmailTelegramPushHook{
 		mainConfig:        cfg.MainConfig,
@@ -60,8 +62,6 @@ func NewPmailTelegramPushHook(cfg *config.Config) *PmailTelegramPushHook {
 		sender:            sender,
 	}
 }
-
-var _ framework.EmailHook = (*PmailTelegramPushHook)(nil)
 
 // GetName 获取插件名称
 func (h *PmailTelegramPushHook) GetName(ctx *context.Context) string {
@@ -86,14 +86,15 @@ func (h *PmailTelegramPushHook) ReceiveSaveAfter(ctx *context.Context, email *pa
 
 		setting, err := h.settingService.GetSetting(userEmail.UserID)
 		if err != nil {
-			logger.PluginLogger.Warn().Err(err).Int("user_id", userEmail.UserID).Msg("获取用户设置失败")
+			logger.PluginLogger.Error().Err(err).Int("user_id", userEmail.UserID).Msg("获取用户设置失败")
 			continue
 		}
+		// 聊天ID不存在不处理
 		if setting.ChatID == "" {
-			// 聊天ID不存在不处理
 			continue
 		}
 
+		// 发送通知
 		cctx, cancel := ccontext.WithTimeout(ccontext.Background(), time.Duration(h.pluginConfig.Timeout)*time.Second)
 		defer cancel()
 		if err = h.sender.SendNotification(cctx, setting, email); err != nil {
@@ -106,18 +107,20 @@ func (h *PmailTelegramPushHook) ReceiveSaveAfter(ctx *context.Context, email *pa
 
 // ReceiveParseBefore 接收解析前的钩子
 func (h *PmailTelegramPushHook) ReceiveParseBefore(ctx *context.Context, email *[]byte) {
-
 }
 
 // ReceiveParseAfter 接收解析后的钩子
-func (h *PmailTelegramPushHook) ReceiveParseAfter(ctx *context.Context, email *parsemail.Email) {}
+func (h *PmailTelegramPushHook) ReceiveParseAfter(ctx *context.Context, email *parsemail.Email) {
+}
 
 // SendAfter 发送后的钩子
 func (h *PmailTelegramPushHook) SendAfter(ctx *context.Context, email *parsemail.Email, err map[string]error) {
 }
 
 // SendBefore 发送前的钩子
-func (h *PmailTelegramPushHook) SendBefore(ctx *context.Context, email *parsemail.Email) {}
+func (h *PmailTelegramPushHook) SendBefore(ctx *context.Context, email *parsemail.Email) {
+
+}
 
 var (
 	//go:embed dist/index.html
