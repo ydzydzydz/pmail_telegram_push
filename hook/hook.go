@@ -60,14 +60,14 @@ func (h *PmailTelegramPushHook) GetName(ctx *context.Context) string {
 }
 
 // ReceiveSaveAfter 接收保存后的钩子
-func (h *PmailTelegramPushHook) ReceiveSaveAfter(ctx *context.Context, email *parsemail.Email, ue []*models.UserEmail) {
-	for _, u := range ue {
+func (h *PmailTelegramPushHook) ReceiveSaveAfter(ctx *context.Context, email *parsemail.Email, userEmails []*models.UserEmail) {
+	for _, userEmail := range userEmails {
 		// 已读邮件不处理
-		if u.IsRead != 0 {
+		if userEmail.IsRead != 0 {
 			continue
 		}
 		// 未读邮件不处理
-		if u.Status != 0 {
+		if userEmail.Status != 0 {
 			continue
 		}
 		// 邮件ID不存在不处理
@@ -75,9 +75,9 @@ func (h *PmailTelegramPushHook) ReceiveSaveAfter(ctx *context.Context, email *pa
 			continue
 		}
 
-		setting, err := h.settingService.GetSetting(u.UserID)
+		setting, err := h.settingService.GetSetting(userEmail.UserID)
 		if err != nil {
-			// 获取设置失败不处理
+			logger.PluginLogger.Warn().Err(err).Int("user_id", userEmail.UserID).Msg("获取用户设置失败")
 			continue
 		}
 		if setting.ChatID == "" {
@@ -99,19 +99,14 @@ func (h *PmailTelegramPushHook) ReceiveParseBefore(ctx *context.Context, email *
 }
 
 // ReceiveParseAfter 接收解析后的钩子
-func (h *PmailTelegramPushHook) ReceiveParseAfter(ctx *context.Context, email *parsemail.Email) {
-
-}
+func (h *PmailTelegramPushHook) ReceiveParseAfter(ctx *context.Context, email *parsemail.Email) {}
 
 // SendAfter 发送后的钩子
 func (h *PmailTelegramPushHook) SendAfter(ctx *context.Context, email *parsemail.Email, err map[string]error) {
-
 }
 
 // SendBefore 发送前的钩子
-func (h *PmailTelegramPushHook) SendBefore(ctx *context.Context, email *parsemail.Email) {
-
-}
+func (h *PmailTelegramPushHook) SendBefore(ctx *context.Context, email *parsemail.Email) {}
 
 // SettingsHtml 获取设置 HTML
 func (h *PmailTelegramPushHook) SettingsHtml(ctx *context.Context, url string, requestData string) string {

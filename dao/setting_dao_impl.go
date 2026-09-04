@@ -8,36 +8,36 @@ import (
 
 // SettingDaoImpl 实现了 ISettingDao 接口
 type SettingDaoImpl struct {
-	db *xorm.Engine
+	db   *xorm.Engine
+	repo *repository.Repository[model.PluginTelegramPushSettingModel]
 }
 
 var _ ISettingDao = (*SettingDaoImpl)(nil)
 
 // NewSettingDaoImpl 创建一个新的 SettingDaoImpl 实例
 func NewSettingDaoImpl(db *xorm.Engine) *SettingDaoImpl {
-	return &SettingDaoImpl{db: db}
+	return &SettingDaoImpl{
+		db:   db,
+		repo: repository.NewRepository[model.PluginTelegramPushSettingModel](db),
+	}
 }
 
 // GetSetting 获取用户的设置
-func (d *SettingDaoImpl) GetSetting(userID int) (*model.TelegramPushSetting, error) {
-	settingRepo := repository.NewRepository[model.TelegramPushSetting](d.db)
-	return settingRepo.FindOne(userID)
+func (d *SettingDaoImpl) GetSetting(userID int) (*model.PluginTelegramPushSettingModel, error) {
+	return d.repo.FindOne(userID)
 }
 
 // UpdateSetting 更新用户的设置
-func (d *SettingDaoImpl) UpdateSetting(userID int, setting *model.TelegramPushSetting) error {
-	settingRepo := repository.NewRepository[model.TelegramPushSetting](d.db)
-	return settingRepo.Update(userID, setting)
+func (d *SettingDaoImpl) UpdateSetting(userID int, setting *model.PluginTelegramPushSettingModel) error {
+	return d.repo.Update(userID, setting)
 }
 
 // CreateSetting 创建用户的设置
-func (d *SettingDaoImpl) CreateSetting(setting *model.TelegramPushSetting) error {
-	settingRepo := repository.NewRepository[model.TelegramPushSetting](d.db)
-	return settingRepo.Create(setting)
+func (d *SettingDaoImpl) CreateSetting(setting *model.PluginTelegramPushSettingModel) error {
+	return d.repo.Create(setting)
 }
 
 // ExistSetting 检查用户的设置是否存在
 func (d *SettingDaoImpl) ExistSetting(userID int) bool {
-	settingRepo := repository.NewRepository[model.TelegramPushSetting](d.db)
-	return settingRepo.Exist(userID)
+	return d.repo.Exist(userID)
 }

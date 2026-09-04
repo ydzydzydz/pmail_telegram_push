@@ -43,12 +43,12 @@ func ErrorResponse(message string) *Response {
 
 // Json 序列化响应体
 func (r *Response) Json() string {
-	json, err := json.Marshal(r)
+	jsonBytes, err := json.Marshal(r)
 	if err != nil {
 		logger.PluginLogger.Error().Err(err).Msg("marshal response failed")
 		return ""
 	}
-	return string(json)
+	return string(jsonBytes)
 }
 
 // getSetting 获取Telegram Push设置
@@ -66,7 +66,7 @@ func (h *PmailTelegramPushHook) getSetting(userID int) string {
 func (h *PmailTelegramPushHook) testMessage(userID int, requestData string) string {
 	const testMessageResource = "testMessage"
 	logger.PluginLogger.Info().Int("user_id", userID).Msg("测试Telegram Push消息")
-	var setting model.TelegramPushSetting
+	var setting model.PluginTelegramPushSettingModel
 	if err := json.Unmarshal([]byte(requestData), &setting); err != nil {
 		logger.PluginLogger.Error().Err(err).Msg("反序列化测试消息请求失败")
 		return ErrorResponse("反序列化测试消息请求失败").Json()
@@ -89,7 +89,7 @@ func (h *PmailTelegramPushHook) testMessage(userID int, requestData string) stri
 func (h *PmailTelegramPushHook) updateSetting(userID int, requestData string) string {
 	logger.PluginLogger.Info().Int("user_id", userID).Msg("更新Telegram Push设置")
 
-	var setting model.TelegramPushSetting
+	var setting model.PluginTelegramPushSettingModel
 	if err := json.Unmarshal([]byte(requestData), &setting); err != nil {
 		logger.PluginLogger.Error().Err(err).Msg("反序列化设置请求失败")
 		return ErrorResponse("反序列化设置请求失败").Json()

@@ -1,7 +1,7 @@
 package model
 
-// TelegramPushSetting 电报推送设置模型
-type TelegramPushSetting struct {
+// PluginTelegramPushSettingModel 电报推送设置模型
+type PluginTelegramPushSettingModel struct {
 	ID                 int    `xorm:"id pk autoincr comment('主键')" json:"-"`
 	UserID             int    `xorm:"user_id int index('idx_uid') comment('用户id') unique('idx_uid')" json:"-"`
 	ChatID             string `xorm:"chat_id varchar(255) index('idx_cid') index comment('聊天id')" json:"chat_id"`
@@ -12,6 +12,6 @@ type TelegramPushSetting struct {
 }
 
 // TableName 表名
-func (u *TelegramPushSetting) TableName() string {
+func (u *PluginTelegramPushSettingModel) TableName() string {
 	return "plugin_telegram_push_setting"
 }

@@ -25,9 +25,9 @@ func NewSettingService(dao dao.ISettingDao) *SettingService {
 
 // GetSetting 获取设置
 // 如果不存在, 则创建默认设置
-func (s *SettingService) GetSetting(userID int) (*model.TelegramPushSetting, error) {
-	has := s.dao.ExistSetting(userID)
-	if !has {
+func (s *SettingService) GetSetting(userID int) (*model.PluginTelegramPushSettingModel, error) {
+	exists := s.dao.ExistSetting(userID)
+	if !exists {
 		if err := s.CreateDefaultSetting(userID); err != nil {
 			return nil, err
 		}
@@ -37,9 +37,9 @@ func (s *SettingService) GetSetting(userID int) (*model.TelegramPushSetting, err
 
 // UpdateSetting 更新设置
 // 如果不存在, 则创建默认设置
-func (s *SettingService) UpdateSetting(userID int, setting *model.TelegramPushSetting) error {
-	has := s.dao.ExistSetting(setting.UserID)
-	if !has {
+func (s *SettingService) UpdateSetting(userID int, setting *model.PluginTelegramPushSettingModel) error {
+	exists := s.dao.ExistSetting(setting.UserID)
+	if !exists {
 		if err := s.CreateDefaultSetting(setting.UserID); err != nil {
 			return err
 		}
@@ -49,7 +49,7 @@ func (s *SettingService) UpdateSetting(userID int, setting *model.TelegramPushSe
 
 // CreateDefaultSetting 创建默认设置
 func (s *SettingService) CreateDefaultSetting(userID int) error {
-	setting := &model.TelegramPushSetting{
+	setting := &model.PluginTelegramPushSettingModel{
 		UserID:             userID,
 		ChatID:             DefaultChatID,
 		ShowContent:        DefaultShowContent,

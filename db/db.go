@@ -54,7 +54,7 @@ func getDB(cfg *config.Config) (*xorm.Engine, error) {
 	// 关闭 SQL 日志记录
 	db.ShowSQL(false)
 	// 同步数据库模型
-	db.Sync2(new(model.TelegramPushSetting))
+	db.Sync2(new(model.PluginTelegramPushSettingModel))
 	return db, nil
 }
 

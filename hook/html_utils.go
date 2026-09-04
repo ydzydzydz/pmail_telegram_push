@@ -7,6 +7,14 @@ import (
 	"github.com/microcosm-cc/bluemonday"
 )
 
+var (
+	languageClassRegex = regexp.MustCompile(`^language-[\w-]+$`)
+	leadingWhitespace  = regexp.MustCompile(`[\t\x20]*\n`)
+	trailingWhitespace = regexp.MustCompile(`\n[\t\x20]*`)
+	multipleNewlines   = regexp.MustCompile(`\n{2,}`)
+	multipleSpaces     = regexp.MustCompile(`[\t\x20]{2,}`)
+)
+
 // removeHTMLTag 移除 HTML 标签
 // 保留 Telegram 支持的标签
 // https://core.telegram.org/bots/api#sendmessage
@@ -44,7 +52,7 @@ func removeHTMLTag(content string) string {
 	// <pre>pre-formatted fixed-width code block</pre>
 	p.AllowElements("pre")
 	// <pre><code class="language-python">pre-formatted fixed-width code block written in the Python programming language</code></pre>
-	p.AllowAttrs("class").Matching(regexp.MustCompile(`^language-[\w-]+$`)).OnElements("code")
+	p.AllowAttrs("class").Matching(languageClassRegex).OnElements("code")
 	// <blockquote>Block quotation started\nBlock quotation continued\nThe last line of the block quotation</blockquote>
 	p.AllowElements("blockquote")
 	// 移除标签时添加空格，解决 a 标签粘在一起
@@ -55,21 +63,11 @@ func removeHTMLTag(content string) string {
 // removeExtraSpace 移除多余空格
 // 删除标签时会替换为空格，多个连续空格影响显示效果
 func removeExtraSpace(content string) string {
-	// 规范换行符
 	content = strings.ReplaceAll(content, "\r\n", "\n")
 	content = strings.ReplaceAll(content, "\r", "\n")
-
-	// 去除换行两侧的空格/制表符
-	// 左侧空白 + 换行
-	content = regexp.MustCompile(`[\t\x20]*\n`).ReplaceAllString(content, "\n")
-	// 换行 + 右侧空白
-	content = regexp.MustCompile(`\n[\t\x20]*`).ReplaceAllString(content, "\n")
-
-	// 多个连续换行替换为一个换行
-	content = regexp.MustCompile(`\n{2,}`).ReplaceAllString(content, "\n")
-
-	// 多个连续空格/制表符替换为一个空格（不影响换行）
-	content = regexp.MustCompile(`[\t\x20]{2,}`).ReplaceAllString(content, " ")
-
+	content = leadingWhitespace.ReplaceAllString(content, "\n")
+	content = trailingWhitespace.ReplaceAllString(content, "\n")
+	content = multipleNewlines.ReplaceAllString(content, "\n")
+	content = multipleSpaces.ReplaceAllString(content, " ")
 	return content
 }
