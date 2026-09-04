@@ -1,4 +1,4 @@
-package hook
+package sender
 
 import (
 	"bytes"
@@ -11,7 +11,8 @@ import (
 	"github.com/Jinnrry/pmail/dto/parsemail"
 	"github.com/go-telegram/bot"
 	"github.com/go-telegram/bot/models"
-	"github.com/ydzydzydz/pmail_telegram_push/model"
+	"github.com/ydzydzydz/pmail_telegram_push/hook/config"
+	"github.com/ydzydzydz/pmail_telegram_push/hook/model"
 )
 
 const (
@@ -20,8 +21,57 @@ const (
 	TELEGRAM_ATTACHMENT_MAX_SIZE  = 20 * 1024 * 1024 // TELEGRAM_ATTACHMENT_MAX_SIZE Telegram 附件最大大小
 )
 
+// TelegramBotSender Telegram机器人发送器
+type TelegramBotSender struct {
+	bot              *bot.Bot
+	pmailWebSiteLink string
+}
+
+// NewTelegramBotSender 创建Telegram机器人发送器
+func NewTelegramBotSender(cfg *config.Config) (*TelegramBotSender, error) {
+	bot, err := NewBot(cfg)
+	if err != nil {
+		return nil, err
+	}
+	var link string
+	if cfg.MainConfig.HttpsEnabled > 1 {
+		link = "http://" + cfg.MainConfig.WebDomain
+	} else {
+		link = "https://" + cfg.MainConfig.WebDomain
+	}
+	return &TelegramBotSender{
+		bot:              bot,
+		pmailWebSiteLink: link,
+	}, nil
+}
+
+// SendNotification 发送通知消息
+func (s *TelegramBotSender) SendNotification(ctx context.Context, setting *model.PluginTelegramPushSettingModel, email *parsemail.Email) error {
+	msg, err := s.sendMessage(ctx, setting, email)
+	if err != nil {
+		return err
+	}
+	return s.sendAttachmentsBatch(ctx, msg.ID, email, setting)
+}
+
+// SendTestMessage 发送测试消息
+func (s *TelegramBotSender) SendTestMessage(ctx context.Context, setting *model.PluginTelegramPushSettingModel) error {
+	params := &bot.SendMessageParams{
+		ChatID:    setting.ChatID,
+		Text:      "这是一条测试消息",
+		ParseMode: models.ParseModeHTML,
+	}
+	_, err := s.bot.SendMessage(ctx, params)
+	return err
+}
+
+// GetBot 获取Telegram机器人
+func (s *TelegramBotSender) GetBot() *bot.Bot {
+	return s.bot
+}
+
 // buildSendText 构建发送文本
-func (h *PmailTelegramPushHook) buildSendText(email *parsemail.Email, setting *model.PluginTelegramPushSettingModel) string {
+func buildSendText(email *parsemail.Email, setting *model.PluginTelegramPushSettingModel) string {
 	text := "📧 有新邮件\n"
 	text += getSubjectText(email)
 	text += getFromText(email)
@@ -60,58 +110,35 @@ func (h *PmailTelegramPushHook) buildSendText(email *parsemail.Email, setting *m
 }
 
 // buildPmailLinkButton 创建Pmail链接按钮
-func (h *PmailTelegramPushHook) buildPmailLinkButton() *models.InlineKeyboardMarkup {
-	var url string
-	if h.mainConfig.HttpsEnabled > 1 {
-		url = "http://" + h.mainConfig.WebDomain
-	} else {
-		url = "https://" + h.mainConfig.WebDomain
-	}
-
+func buildPmailLinkButton(pmailWebSiteLink string) *models.InlineKeyboardMarkup {
 	return &models.InlineKeyboardMarkup{
 		InlineKeyboard: [][]models.InlineKeyboardButton{
 			{
 				{
 					Text: "查收邮件",
-					URL:  url,
+					URL:  pmailWebSiteLink,
 				},
 			},
 		},
 	}
 }
 
-// sendText 发送文本消息
-func (h *PmailTelegramPushHook) sendText(email *parsemail.Email, setting *model.PluginTelegramPushSettingModel) (msg *models.Message, err error) {
-	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(h.pluginConfig.Timeout)*time.Second)
-	defer cancel()
-
+// sendMessage 发送文本消息
+func (s *TelegramBotSender) sendMessage(ctx context.Context, setting *model.PluginTelegramPushSettingModel, email *parsemail.Email) (msg *models.Message, err error) {
 	params := &bot.SendMessageParams{
 		ChatID:      setting.ChatID,
-		Text:        h.buildSendText(email, setting),
+		Text:        buildSendText(email, setting),
 		ParseMode:   models.ParseModeHTML,
-		ReplyMarkup: h.buildPmailLinkButton(),
+		ReplyMarkup: buildPmailLinkButton(s.pmailWebSiteLink),
 		LinkPreviewOptions: &models.LinkPreviewOptions{
 			IsDisabled: &setting.DisableLinkPreview,
 		},
 	}
-
-	return h.bot.SendMessage(ctx, params)
-}
-
-// sendNotification 发送通知消息
-// 先发送文本消息，再发送附件消息
-func (h *PmailTelegramPushHook) sendNotification(email *parsemail.Email, setting *model.PluginTelegramPushSettingModel) (err error) {
-	msg, err := h.sendText(email, setting)
-	if err != nil {
-		return err
-	}
-	return h.sendAttachmentsBatch(msg.ID, email, setting)
+	return s.bot.SendMessage(ctx, params)
 }
 
 // sendAttachmentsBatch 批量发送附件消息
-func (h *PmailTelegramPushHook) sendAttachmentsBatch(id int, email *parsemail.Email, setting *model.PluginTelegramPushSettingModel) (err error) {
-	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(h.pluginConfig.Timeout)*time.Second)
-	defer cancel()
+func (s *TelegramBotSender) sendAttachmentsBatch(ctx context.Context, id int, email *parsemail.Email, setting *model.PluginTelegramPushSettingModel) (err error) {
 
 	// 引用消息中包含附件关键字
 	params := &bot.SendMediaGroupParams{
@@ -142,7 +169,7 @@ func (h *PmailTelegramPushHook) sendAttachmentsBatch(id int, email *parsemail.Em
 		if len(params.Media) == 0 {
 			continue
 		}
-		if _, err = h.bot.SendMediaGroup(ctx, params); err != nil {
+		if _, err = s.bot.SendMediaGroup(ctx, params); err != nil {
 			return err
 		}
 		// 每个批次发送后休息 1 秒, 避免触发速率限制
@@ -150,15 +177,4 @@ func (h *PmailTelegramPushHook) sendAttachmentsBatch(id int, email *parsemail.Em
 	}
 
 	return nil
-}
-
-func (h *PmailTelegramPushHook) sendTestMessage(setting *model.PluginTelegramPushSettingModel) (msg *models.Message, err error) {
-	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(h.pluginConfig.Timeout)*time.Second)
-	defer cancel()
-	params := &bot.SendMessageParams{
-		ChatID:    setting.ChatID,
-		Text:      "这是一条测试消息",
-		ParseMode: models.ParseModeHTML,
-	}
-	return h.bot.SendMessage(ctx, params)
 }

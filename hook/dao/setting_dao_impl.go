@@ -1,8 +1,8 @@
 package dao
 
 import (
-	"github.com/ydzydzydz/pmail_telegram_push/db/repository"
-	"github.com/ydzydzydz/pmail_telegram_push/model"
+	"github.com/ydzydzydz/pmail_telegram_push/hook/db/repository"
+	"github.com/ydzydzydz/pmail_telegram_push/hook/model"
 	"xorm.io/xorm"
 )
 
@@ -37,7 +37,7 @@ func (d *SettingDaoImpl) CreateSetting(setting *model.PluginTelegramPushSettingM
 	return d.repo.Create(setting)
 }
 
-// ExistSetting 检查用户的设置是否存在
-func (d *SettingDaoImpl) ExistSetting(userID int) bool {
-	return d.repo.Exist(userID)
+// GetOrCreate 获取用户的设置，如果不存在则创建
+func (d *SettingDaoImpl) GetOrCreate(userID int, setting *model.PluginTelegramPushSettingModel) (*model.PluginTelegramPushSettingModel, error) {
+	return d.repo.GetOrCreate(userID, setting)
 }

@@ -2,9 +2,12 @@ package repository
 
 import (
 	"errors"
+	"strings"
 
 	"xorm.io/xorm"
 )
+
+var ErrItemNotFound = errors.New("item not found")
 
 // IRepository 仓库接口
 type IRepository[T any] interface {
@@ -53,7 +56,28 @@ func (r *Repository[T]) FindOne(userID int) (*T, error) {
 		return nil, err
 	}
 	if !has {
-		return nil, errors.New("item not found")
+		return nil, ErrItemNotFound
 	}
 	return item, nil
+}
+
+// GetOrCreate 获取记录，如果不存在则创建
+func (r *Repository[T]) GetOrCreate(userID int, item *T) (*T, error) {
+	existing, err := r.FindOne(userID)
+	if err == nil {
+		return existing, nil
+	}
+	if !errors.Is(err, ErrItemNotFound) {
+		return nil, err
+	}
+
+	createErr := r.Create(item)
+	if createErr == nil {
+		return item, nil
+	}
+
+	if strings.Contains(createErr.Error(), "Duplicate") || strings.Contains(createErr.Error(), "UNIQUE constraint") {
+		return r.FindOne(userID)
+	}
+	return nil, createErr
 }

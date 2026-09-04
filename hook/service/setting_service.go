@@ -1,8 +1,8 @@
 package service
 
 import (
-	"github.com/ydzydzydz/pmail_telegram_push/dao"
-	"github.com/ydzydzydz/pmail_telegram_push/model"
+	"github.com/ydzydzydz/pmail_telegram_push/hook/dao"
+	"github.com/ydzydzydz/pmail_telegram_push/hook/model"
 )
 
 // SettingService 设置服务
@@ -26,23 +26,31 @@ func NewSettingService(dao dao.ISettingDao) *SettingService {
 // GetSetting 获取设置
 // 如果不存在, 则创建默认设置
 func (s *SettingService) GetSetting(userID int) (*model.PluginTelegramPushSettingModel, error) {
-	exists := s.dao.ExistSetting(userID)
-	if !exists {
-		if err := s.CreateDefaultSetting(userID); err != nil {
-			return nil, err
-		}
+	defaultSetting := &model.PluginTelegramPushSettingModel{
+		UserID:             userID,
+		ChatID:             DefaultChatID,
+		ShowContent:        DefaultShowContent,
+		SpoilerContent:     DefaultSpoilerContent,
+		SendAttachments:    DefaultSendAttachments,
+		DisableLinkPreview: DefaultDisableLinkPreview,
 	}
-	return s.dao.GetSetting(userID)
+	return s.dao.GetOrCreate(userID, defaultSetting)
 }
 
 // UpdateSetting 更新设置
-// 如果不存在, 则创建默认设置
+// 如果不存在, 则创建默认设置后更新
 func (s *SettingService) UpdateSetting(userID int, setting *model.PluginTelegramPushSettingModel) error {
-	exists := s.dao.ExistSetting(setting.UserID)
-	if !exists {
-		if err := s.CreateDefaultSetting(setting.UserID); err != nil {
-			return err
-		}
+	defaultSetting := &model.PluginTelegramPushSettingModel{
+		UserID:             userID,
+		ChatID:             DefaultChatID,
+		ShowContent:        DefaultShowContent,
+		SpoilerContent:     DefaultSpoilerContent,
+		SendAttachments:    DefaultSendAttachments,
+		DisableLinkPreview: DefaultDisableLinkPreview,
+	}
+	_, err := s.dao.GetOrCreate(userID, defaultSetting)
+	if err != nil {
+		return err
 	}
 	return s.dao.UpdateSetting(userID, setting)
 }

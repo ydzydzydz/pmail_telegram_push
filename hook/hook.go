@@ -3,18 +3,20 @@ package hook
 import (
 	"strings"
 
-	"github.com/ydzydzydz/pmail_telegram_push/config"
-	"github.com/ydzydzydz/pmail_telegram_push/logger"
-	"github.com/ydzydzydz/pmail_telegram_push/service"
+	"github.com/ydzydzydz/pmail_telegram_push/hook/config"
+	"github.com/ydzydzydz/pmail_telegram_push/hook/controller"
+	"github.com/ydzydzydz/pmail_telegram_push/hook/db"
+	"github.com/ydzydzydz/pmail_telegram_push/hook/logger"
+	"github.com/ydzydzydz/pmail_telegram_push/hook/sender"
+	"github.com/ydzydzydz/pmail_telegram_push/hook/service"
+
+	_ "embed"
 
 	pconfig "github.com/Jinnrry/pmail/config"
 	"github.com/Jinnrry/pmail/dto/parsemail"
 	"github.com/Jinnrry/pmail/hooks/framework"
 	"github.com/Jinnrry/pmail/models"
 	"github.com/Jinnrry/pmail/utils/context"
-	"github.com/go-telegram/bot"
-
-	"github.com/ydzydzydz/pmail_telegram_push/db"
 )
 
 const (
@@ -23,32 +25,36 @@ const (
 
 // PmailTelegramPushHook 插件钩子
 type PmailTelegramPushHook struct {
-	bot            *bot.Bot
-	mainConfig     *pconfig.Config
-	pluginConfig   *config.PluginConfig
-	settingService *service.SettingService
+	mainConfig        *pconfig.Config
+	pluginConfig      *config.PluginConfig
+	settingService    *service.SettingService
+	settingController *controller.SettingController
+	botController     *controller.BotController
+	sender            *sender.TelegramBotSender
 }
 
 // NewPmailTelegramPushHook 创建插件钩子
 func NewPmailTelegramPushHook(cfg *config.Config) *PmailTelegramPushHook {
-	bot, err := NewBot(cfg)
-	if err != nil {
-		logger.PluginLogger.Fatal().Err(err).Msg("创建bot失败")
-	}
-	logger.PluginLogger.Info().Msg("bot初始化成功")
-
 	dataSource, err := db.NewDataSource(cfg)
 	if err != nil {
 		logger.PluginLogger.Fatal().Err(err).Msg("创建数据库连接失败")
 	}
 	logger.PluginLogger.Info().Msg("数据库初始化成功")
-
 	settingService := service.NewSettingService(dataSource.SettingDao())
+
+	sender, err := sender.NewTelegramBotSender(cfg)
+	if err != nil {
+		logger.PluginLogger.Fatal().Err(err).Msg("创建sender失败")
+	}
+	logger.PluginLogger.Info().Msg("sender初始化成功")
+
 	return &PmailTelegramPushHook{
-		bot:            bot,
-		mainConfig:     cfg.MainConfig,
-		pluginConfig:   cfg.PluginConfig,
-		settingService: settingService,
+		mainConfig:        cfg.MainConfig,
+		pluginConfig:      cfg.PluginConfig,
+		settingService:    settingService,
+		settingController: controller.NewSettingController(settingService),
+		botController:     controller.NewBotController(sender),
+		sender:            sender,
 	}
 }
 
@@ -66,8 +72,12 @@ func (h *PmailTelegramPushHook) ReceiveSaveAfter(ctx *context.Context, email *pa
 		if userEmail.IsRead != 0 {
 			continue
 		}
-		// 未读邮件不处理
-		if userEmail.Status != 0 {
+		// 未发送或收件邮件不处理
+		if userEmail.Status != StatusUnsentOrReceived {
+			continue
+		}
+		// 已删除或广告邮件不处理
+		if userEmail.Status == StatusDeleted || userEmail.Status == StatusJunk {
 			continue
 		}
 		// 邮件ID不存在不处理
@@ -85,7 +95,7 @@ func (h *PmailTelegramPushHook) ReceiveSaveAfter(ctx *context.Context, email *pa
 			continue
 		}
 
-		if err = h.sendNotification(email, setting); err != nil {
+		if err = h.sender.SendNotification(ctx, setting, email); err != nil {
 			logger.PluginLogger.Error().Err(err).Int64("email_message_id", email.MessageId).Msg("发送通知失败")
 			continue
 		}
@@ -108,21 +118,22 @@ func (h *PmailTelegramPushHook) SendAfter(ctx *context.Context, email *parsemail
 // SendBefore 发送前的钩子
 func (h *PmailTelegramPushHook) SendBefore(ctx *context.Context, email *parsemail.Email) {}
 
+var (
+	//go:embed dist/index.html
+	SettingHtml string // 设置页面
+)
+
 // SettingsHtml 获取设置 HTML
 func (h *PmailTelegramPushHook) SettingsHtml(ctx *context.Context, url string, requestData string) string {
 	switch {
-	// 获取用户设置
-	case strings.Contains(url, "getSetting"):
-		return h.getSetting(ctx.UserID)
-	// 获取机器人信息
-	case strings.Contains(url, "getBotInfo"):
-		return h.getBotInfo()
-	// 更新设置
-	case strings.Contains(url, "updateSetting"):
-		return h.updateSetting(ctx.UserID, requestData)
-	// 测试消息
-	case strings.Contains(url, "testMessage"):
-		return h.testMessage(ctx.UserID, requestData)
+	case strings.HasSuffix(url, "getSetting"):
+		return h.settingController.GetSetting(ctx.UserID)
+	case strings.HasSuffix(url, "getBotInfo"):
+		return h.botController.GetBotInfo()
+	case strings.HasSuffix(url, "updateSetting"):
+		return h.settingController.UpdateSetting(ctx.UserID, requestData)
+	case strings.HasSuffix(url, "testMessage"):
+		return h.botController.SendTestMessage(ctx.UserID, requestData)
 	default:
 		return SettingHtml
 	}

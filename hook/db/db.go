@@ -6,10 +6,11 @@ import (
 
 	_ "github.com/go-sql-driver/mysql"
 	_ "github.com/lib/pq"
-	"github.com/ydzydzydz/pmail_telegram_push/config"
-	"github.com/ydzydzydz/pmail_telegram_push/dao"
-	"github.com/ydzydzydz/pmail_telegram_push/model"
+	"github.com/ydzydzydz/pmail_telegram_push/hook/config"
+	"github.com/ydzydzydz/pmail_telegram_push/hook/dao"
+	"github.com/ydzydzydz/pmail_telegram_push/hook/model"
 	_ "modernc.org/sqlite"
+
 	"xorm.io/xorm"
 )
 

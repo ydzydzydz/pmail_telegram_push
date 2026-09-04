@@ -1,6 +1,6 @@
 package dao
 
-import "github.com/ydzydzydz/pmail_telegram_push/model"
+import "github.com/ydzydzydz/pmail_telegram_push/hook/model"
 
 // ISettingDao 是设置数据访问对象的接口
 type ISettingDao interface {
@@ -10,6 +10,6 @@ type ISettingDao interface {
 	UpdateSetting(userID int, setting *model.PluginTelegramPushSettingModel) error
 	// CreateSetting 创建用户的设置
 	CreateSetting(setting *model.PluginTelegramPushSettingModel) error
-	// ExistSetting 检查用户的设置是否存在
-	ExistSetting(userID int) bool
+	// GetOrCreate 获取用户的设置，如果不存在则创建
+	GetOrCreate(userID int, setting *model.PluginTelegramPushSettingModel) (*model.PluginTelegramPushSettingModel, error)
 }
