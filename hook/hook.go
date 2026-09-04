@@ -2,6 +2,7 @@ package hook
 
 import (
 	"strings"
+	"time"
 
 	"github.com/ydzydzydz/pmail_telegram_push/hook/config"
 	"github.com/ydzydzydz/pmail_telegram_push/hook/controller"
@@ -11,6 +12,8 @@ import (
 	"github.com/ydzydzydz/pmail_telegram_push/hook/service"
 
 	_ "embed"
+
+	ccontext "context"
 
 	pconfig "github.com/Jinnrry/pmail/config"
 	"github.com/Jinnrry/pmail/dto/parsemail"
@@ -73,11 +76,7 @@ func (h *PmailTelegramPushHook) ReceiveSaveAfter(ctx *context.Context, email *pa
 			continue
 		}
 		// 未发送或收件邮件不处理
-		if userEmail.Status != StatusUnsentOrReceived {
-			continue
-		}
-		// 已删除或广告邮件不处理
-		if userEmail.Status == StatusDeleted || userEmail.Status == StatusJunk {
+		if userEmail.Status != int8(StatusUnsentOrReceived) {
 			continue
 		}
 		// 邮件ID不存在不处理
@@ -95,7 +94,9 @@ func (h *PmailTelegramPushHook) ReceiveSaveAfter(ctx *context.Context, email *pa
 			continue
 		}
 
-		if err = h.sender.SendNotification(ctx, setting, email); err != nil {
+		cctx, cancel := ccontext.WithTimeout(ccontext.Background(), time.Duration(h.pluginConfig.Timeout)*time.Second)
+		defer cancel()
+		if err = h.sender.SendNotification(cctx, setting, email); err != nil {
 			logger.PluginLogger.Error().Err(err).Int64("email_message_id", email.MessageId).Msg("发送通知失败")
 			continue
 		}
