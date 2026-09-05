@@ -16,7 +16,6 @@ import (
 
 	ccontext "context"
 
-	pconfig "github.com/Jinnrry/pmail/config"
 	"github.com/Jinnrry/pmail/dto/parsemail"
 	"github.com/Jinnrry/pmail/hooks/framework"
 	"github.com/Jinnrry/pmail/models"
@@ -29,7 +28,6 @@ const (
 
 // PmailTelegramPushHook 插件钩子
 type PmailTelegramPushHook struct {
-	mainConfig        *pconfig.Config
 	pluginConfig      *config.PluginConfig
 	settingService    *service.SettingService
 	userEmailService  *service.UserEmailService
@@ -47,23 +45,25 @@ func NewPmailTelegramPushHook(cfg *config.Config) *PmailTelegramPushHook {
 		logger.PluginLogger.Fatal().Err(err).Msg("创建数据库连接失败")
 	}
 	logger.PluginLogger.Info().Msg("数据库初始化成功")
-	settingService := service.NewSettingService(dataSource.DB())
-	userEmailService := service.NewUserEmailService(dataSource.DB())
 
-	sender, err := sender.NewTelegramBotSender(cfg)
+	telegramSender, err := sender.NewTelegramBotSender(cfg)
 	if err != nil {
 		logger.PluginLogger.Fatal().Err(err).Msg("创建Telegram Bot发送器失败")
 	}
 	logger.PluginLogger.Info().Msg("Telegram Bot发送器初始化成功")
 
+	settingService := service.NewSettingService(dataSource.DB())
+	userEmailService := service.NewUserEmailService(dataSource.DB())
+	settingController := controller.NewSettingController(settingService)
+	botController := controller.NewBotController(telegramSender)
+
 	return &PmailTelegramPushHook{
-		mainConfig:        cfg.MainConfig,
 		pluginConfig:      cfg.PluginConfig,
 		settingService:    settingService,
 		userEmailService:  userEmailService,
-		settingController: controller.NewSettingController(settingService),
-		botController:     controller.NewBotController(sender),
-		sender:            sender,
+		settingController: settingController,
+		botController:     botController,
+		sender:            telegramSender,
 	}
 }
 
@@ -108,7 +108,7 @@ func (h *PmailTelegramPushHook) ReceiveSaveAfter(ctx *context.Context, email *pa
 			logger.PluginLogger.Error().Err(err).Int64("email_message_id", email.MessageId).Msg("获取用户邮件状态失败")
 			continue
 		}
-		logger.PluginLogger.Info().Int("user_id", userEmail.UserID).Int("email_id", userEmail.EmailID).Str("status", status.String()).Msg("用户邮件状态")
+		logger.PluginLogger.Info().Int("user_id", userEmail.UserID).Int("email_id", userEmail.EmailID).Str("status", status.String()).Msg("用户邮件状态查询成功")
 
 		if status != model.StatusUnsentOrReceived {
 			continue
