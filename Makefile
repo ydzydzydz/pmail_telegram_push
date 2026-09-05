@@ -1,6 +1,7 @@
 .PHONY: help build build-frontend build-backend test test-verbose clean tidy install-deps install-backend install-frontend run dev lint lint-frontend lint-backend format release release-all
 
 BINARY_NAME := pmail_telegram_push
+RELEASE_DIR := release
 BACKEND_DIR := backend
 FRONTEND_DIR := frontend
 HOOK_DIST := $(BACKEND_DIR)/hook/dist
@@ -16,8 +17,6 @@ PLATFORMS := \
 	windows/arm64
 
 help:
-	@echo "==================== pmail_telegram_push ===================="
-	@echo ""
 	@echo "Usage:"
 	@echo "  make <target>"
 	@echo ""
@@ -40,7 +39,6 @@ help:
 	@echo "  release            Build for current platform (optimized)"
 	@echo "  release-all        Cross-compile for all platforms ($(PLATFORMS))"
 	@echo "  clean              Remove build artifacts"
-	@echo ""
 
 install-deps: install-backend install-frontend
 	@echo "All dependencies installed successfully."
@@ -66,15 +64,16 @@ build-frontend:
 
 build-backend:
 	@echo "==> Building backend binary..."
-	@cd $(BACKEND_DIR) && CGO_ENABLED=$(CGO_ENABLED) go build $(LDFLAGS) -o ../$(BINARY_NAME) .
-	@echo "Backend build completed: $(BINARY_NAME)"
+	@mkdir -p $(RELEASE_DIR)
+	@cd $(BACKEND_DIR) && CGO_ENABLED=$(CGO_ENABLED) go build $(LDFLAGS) -o ../$(RELEASE_DIR)/$(BINARY_NAME) .
+	@echo "Backend build completed: $(RELEASE_DIR)/$(BINARY_NAME)"
 
 build: build-frontend build-backend
 	@echo "Full build completed successfully!"
 
 run: build
-	@echo "==> Running $(BINARY_NAME)..."
-	@./$(BINARY_NAME)
+	@echo "==> Running $(RELEASE_DIR)/$(BINARY_NAME)..."
+	@./$(RELEASE_DIR)/$(BINARY_NAME)
 
 dev:
 	@echo "==> Starting frontend dev server..."
@@ -117,11 +116,13 @@ tidy:
 
 release:
 	@echo "==> Building release for current platform..."
-	@cd $(BACKEND_DIR) && CGO_ENABLED=$(CGO_ENABLED) go build $(LDFLAGS) -o ../$(BINARY_NAME) .
-	@echo "Release build completed: $(BINARY_NAME)"
+	@mkdir -p $(RELEASE_DIR)
+	@cd $(BACKEND_DIR) && CGO_ENABLED=$(CGO_ENABLED) go build $(LDFLAGS) -o ../$(RELEASE_DIR)/$(BINARY_NAME) .
+	@echo "Release build completed: $(RELEASE_DIR)/$(BINARY_NAME)"
 
 release-all: build-frontend
 	@echo "==> Cross-compiling for all platforms..."
+	@mkdir -p $(RELEASE_DIR)
 	@for platform in $(PLATFORMS); do \
 		goos=$${platform%/*}; \
 		goarch=$${platform#*/}; \
@@ -129,14 +130,13 @@ release-all: build-frontend
 		if [ "$$goos" = "windows" ]; then ext=".exe"; fi; \
 		output="$(BINARY_NAME)_$${goos}_$${goarch}$${ext}"; \
 		echo "  -> Building $$output ..."; \
-		( cd $(BACKEND_DIR) && CGO_ENABLED=$(CGO_ENABLED) GOOS=$$goos GOARCH=$$goarch go build $(LDFLAGS) -o ../$$output . ) || exit 1; \
+		( cd $(BACKEND_DIR) && CGO_ENABLED=$(CGO_ENABLED) GOOS=$$goos GOARCH=$$goarch go build $(LDFLAGS) -o ../$(RELEASE_DIR)/$$output . ) || exit 1; \
 	done
 	@echo "All releases built successfully."
 
 clean:
 	@echo "==> Cleaning build artifacts..."
-	@rm -f $(BINARY_NAME)
-	@rm -f $(BINARY_NAME)_*
+	@rm -rf $(RELEASE_DIR)
 	@rm -rf $(HOOK_DIST)
 	@rm -rf $(FRONTEND_DIR)/dist
 	@cd $(BACKEND_DIR) && go clean

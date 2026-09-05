@@ -1,6 +1,7 @@
 config/*.json
 pmail_telegram_push*
 *.db
+release/
 
 # Logs
 logs
