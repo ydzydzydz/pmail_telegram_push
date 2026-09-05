@@ -8,6 +8,7 @@ import (
 	"github.com/ydzydzydz/pmail_telegram_push/controller"
 	"github.com/ydzydzydz/pmail_telegram_push/db"
 	"github.com/ydzydzydz/pmail_telegram_push/logger"
+	"github.com/ydzydzydz/pmail_telegram_push/model"
 	"github.com/ydzydzydz/pmail_telegram_push/sender"
 	"github.com/ydzydzydz/pmail_telegram_push/service"
 
@@ -31,6 +32,7 @@ type PmailTelegramPushHook struct {
 	mainConfig        *pconfig.Config
 	pluginConfig      *config.PluginConfig
 	settingService    *service.SettingService
+	userEmailService  *service.UserEmailService
 	settingController *controller.SettingController
 	botController     *controller.BotController
 	sender            *sender.TelegramBotSender
@@ -45,7 +47,8 @@ func NewPmailTelegramPushHook(cfg *config.Config) *PmailTelegramPushHook {
 		logger.PluginLogger.Fatal().Err(err).Msg("创建数据库连接失败")
 	}
 	logger.PluginLogger.Info().Msg("数据库初始化成功")
-	settingService := service.NewSettingService(dataSource.SettingDao())
+	settingService := service.NewSettingService(dataSource.DB())
+	userEmailService := service.NewUserEmailService(dataSource.DB())
 
 	sender, err := sender.NewTelegramBotSender(cfg)
 	if err != nil {
@@ -57,6 +60,7 @@ func NewPmailTelegramPushHook(cfg *config.Config) *PmailTelegramPushHook {
 		mainConfig:        cfg.MainConfig,
 		pluginConfig:      cfg.PluginConfig,
 		settingService:    settingService,
+		userEmailService:  userEmailService,
 		settingController: controller.NewSettingController(settingService),
 		botController:     controller.NewBotController(sender),
 		sender:            sender,
@@ -75,10 +79,6 @@ func (h *PmailTelegramPushHook) ReceiveSaveAfter(ctx *context.Context, email *pa
 		if userEmail.IsRead != 0 {
 			continue
 		}
-		// 未发送或收件邮件不处理
-		if UserEmailStatus(userEmail.Status) != StatusUnsentOrReceived {
-			continue
-		}
 		// 邮件ID不存在不处理
 		if email.MessageId <= 0 {
 			continue
@@ -91,6 +91,26 @@ func (h *PmailTelegramPushHook) ReceiveSaveAfter(ctx *context.Context, email *pa
 		}
 		// 聊天ID不存在不处理
 		if setting.ChatID == "" {
+			continue
+		}
+
+		// 未发送或收件邮件不处理
+		// if model.UserEmailStatus(userEmail.Status) != model.StatusUnsentOrReceived {
+		// 	continue
+		// }
+
+		// fix: https://github.com/Jinnrry/PMail/discussions/357
+		// ? 不确定是否有用，无法确定查询时状态一定更新到数据库
+		// ! 根本解决需要框架层面支持
+		// 从数据库查询用户邮件状态
+		status, err := h.userEmailService.GetUserEmailStatus(userEmail.UserID, userEmail.EmailID)
+		if err != nil {
+			logger.PluginLogger.Error().Err(err).Int64("email_message_id", email.MessageId).Msg("获取用户邮件状态失败")
+			continue
+		}
+		logger.PluginLogger.Info().Int("user_id", userEmail.UserID).Int("email_id", userEmail.EmailID).Str("status", status.String()).Msg("用户邮件状态")
+
+		if status != model.StatusUnsentOrReceived {
 			continue
 		}
 

@@ -1,13 +1,18 @@
 package service
 
 import (
-	"github.com/ydzydzydz/pmail_telegram_push/dao"
+	"errors"
+	"strings"
+
 	"github.com/ydzydzydz/pmail_telegram_push/model"
+	"xorm.io/xorm"
 )
+
+var ErrSettingNotFound = errors.New("setting not found")
 
 // SettingService 设置服务
 type SettingService struct {
-	dao dao.ISettingDao
+	db *xorm.Engine
 }
 
 const (
@@ -19,8 +24,56 @@ const (
 )
 
 // NewSettingService 创建设置服务实例
-func NewSettingService(dao dao.ISettingDao) *SettingService {
-	return &SettingService{dao: dao}
+func NewSettingService(db *xorm.Engine) *SettingService {
+	return &SettingService{db: db}
+}
+
+// findSetting 按 user_id 查询单条设置记录
+func (s *SettingService) findSetting(userID int) (*model.PluginTelegramPushSettingModel, bool, error) {
+	setting := new(model.PluginTelegramPushSettingModel)
+	has, err := s.db.Where("user_id = ?", userID).Get(setting)
+	if err != nil {
+		return nil, false, err
+	}
+	return setting, has, nil
+}
+
+// getOrCreateSetting 原子化的 GetOrCreate，避免并发插入时的重复键冲突
+func (s *SettingService) getOrCreateSetting(userID int, defaultSetting *model.PluginTelegramPushSettingModel) (*model.PluginTelegramPushSettingModel, error) {
+	existing, has, err := s.findSetting(userID)
+	if err != nil {
+		return nil, err
+	}
+	if has {
+		return existing, nil
+	}
+
+	if _, createErr := s.db.Insert(defaultSetting); createErr == nil {
+		return defaultSetting, nil
+	} else if !isDuplicateErr(createErr) {
+		return nil, createErr
+	}
+
+	setting, has, err := s.findSetting(userID)
+	if err != nil {
+		return nil, err
+	}
+	if !has {
+		return nil, ErrSettingNotFound
+	}
+	return setting, nil
+}
+
+// isDuplicateErr 判断错误是否为重复键冲突（MySQL / SQLite / PostgreSQL 常见信息）
+func isDuplicateErr(err error) bool {
+	if err == nil {
+		return false
+	}
+	msg := err.Error()
+	return strings.Contains(msg, "Duplicate") ||
+		strings.Contains(msg, "UNIQUE constraint") ||
+		strings.Contains(msg, "duplicate key") ||
+		strings.Contains(msg, "unique_violation")
 }
 
 // GetSetting 获取设置
@@ -34,7 +87,7 @@ func (s *SettingService) GetSetting(userID int) (*model.PluginTelegramPushSettin
 		SendAttachments:    DefaultSendAttachments,
 		DisableLinkPreview: DefaultDisableLinkPreview,
 	}
-	return s.dao.GetOrCreate(userID, defaultSetting)
+	return s.getOrCreateSetting(userID, defaultSetting)
 }
 
 // UpdateSetting 更新设置
@@ -48,11 +101,11 @@ func (s *SettingService) UpdateSetting(userID int, setting *model.PluginTelegram
 		SendAttachments:    DefaultSendAttachments,
 		DisableLinkPreview: DefaultDisableLinkPreview,
 	}
-	_, err := s.dao.GetOrCreate(userID, defaultSetting)
-	if err != nil {
+	if _, err := s.getOrCreateSetting(userID, defaultSetting); err != nil {
 		return err
 	}
-	return s.dao.UpdateSetting(userID, setting)
+	_, err := s.db.Where("user_id = ?", userID).AllCols().Update(setting)
+	return err
 }
 
 // CreateDefaultSetting 创建默认设置
@@ -65,5 +118,6 @@ func (s *SettingService) CreateDefaultSetting(userID int) error {
 		SendAttachments:    DefaultSendAttachments,
 		DisableLinkPreview: DefaultDisableLinkPreview,
 	}
-	return s.dao.CreateSetting(setting)
+	_, err := s.db.Insert(setting)
+	return err
 }

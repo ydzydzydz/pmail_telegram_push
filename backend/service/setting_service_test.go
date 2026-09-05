@@ -3,7 +3,6 @@ package service
 import (
 	"testing"
 
-	"github.com/ydzydzydz/pmail_telegram_push/dao"
 	"github.com/ydzydzydz/pmail_telegram_push/model"
 	_ "modernc.org/sqlite"
 	"xorm.io/xorm"
@@ -19,8 +18,7 @@ func newTestSettingService(t *testing.T) (*SettingService, func()) {
 	if err != nil {
 		t.Fatalf("failed to sync schema: %v", err)
 	}
-	settingDao := dao.NewSettingDaoImpl(db)
-	settingService := NewSettingService(settingDao)
+	settingService := NewSettingService(db)
 	return settingService, func() {
 		db.Close()
 	}

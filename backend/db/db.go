@@ -7,7 +7,6 @@ import (
 	_ "github.com/go-sql-driver/mysql"
 	_ "github.com/lib/pq"
 	"github.com/ydzydzydz/pmail_telegram_push/config"
-	"github.com/ydzydzydz/pmail_telegram_push/dao"
 	"github.com/ydzydzydz/pmail_telegram_push/model"
 	_ "modernc.org/sqlite"
 
@@ -92,7 +91,12 @@ func initSqlite(dsn string) (*xorm.Engine, error) {
 	return db, nil
 }
 
-// SettingDao 返回设置数据访问对象
-func (d *DataSource) SettingDao() dao.ISettingDao {
-	return dao.NewSettingDaoImpl(d.db)
+// DB 返回底层 xorm.Engine 实例，供 Service 层直接使用
+func (d *DataSource) DB() *xorm.Engine {
+	return d.db
+}
+
+// Close 关闭数据库连接
+func (d *DataSource) Close() error {
+	return d.db.Close()
 }
