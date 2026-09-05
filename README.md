@@ -13,28 +13,35 @@
 - **设置代理**：支持通过 HTTP 或 Socks5 代理发送请求。
 - **多用户支持**：每个用户可以独立配置自己的 Telegram 聊天 ID。
 
-## 🚀 安装
+## �🚀 安装
 
-1.  **编译插件**：
+### 使用 Makefile 安装
+
+1.  **安装依赖**：
 
     ```bash
-    CGO_ENABLED=0 go build -o pmail_telegram_push
+    make install-deps
     ```
 
-2.  **复制插件**：
+2.  **构建**（前端 + 后端，一步到位）：
+
+    ```bash
+    make build
+    ```
+
+3.  **复制插件**：
     将编译好的 `pmail_telegram_push` 文件复制到 Pmail 的 `plugins` 目录下。
 
     ```bash
-    cp -v ./pmail_telegram_push ./plugins/pmail_telegram_push
+    cp -v ./pmail_telegram_push /path/to/pmail/plugins/pmail_telegram_push
     ```
 
-3.  **添加权限**：
+4.  **添加权限**：
     为插件添加可执行权限。
 
     ```bash
-    chmod +x ./plugins/pmail_telegram_push
+    chmod +x /path/to/pmail/plugins/pmail_telegram_push
     ```
-
 
 ## ⚙️ 配置
 
@@ -56,7 +63,7 @@
 | `telegram_bot_token` | `string`  | 是       | Telegram 机器人 Token。可以从 [BotFather](https://t.me/BotFather) 获取。                    |
 | `debug`              | `boolean` | 否       | 是否开启 Debug 模式，开启后会输出更详细的日志信息。默认为 `false`。                         |
 | `proxy`              | `string`  | 否       | 代理服务器地址，格式为 `http://ip:port` 或 `socks5://ip:port`。默认为空字符串，不使用代理。 |
-| `timeout`            | `string`  | 否       | 超时时间，格式为数字，单位为秒。默认为 `30`。                                               |
+| `timeout`            | `number`  | 否       | 超时时间，单位为秒。默认为 `30`。                                                           |
 
 ## 💡 使用
 
@@ -72,6 +79,9 @@
 ## 🤝 贡献
 
 欢迎提交 Pull Request 或 Issue，为项目做出贡献！
+
+- 本地构建请优先使用 Makefile，保证与 CI 行为一致。
+- 提交代码前建议执行 `make lint` 和 `make test`。
 
 ## 📄 许可证
 
