@@ -23,8 +23,8 @@ const (
 
 // TelegramBotSender Telegram机器人发送器
 type TelegramBotSender struct {
-	bot              *bot.Bot
-	pmailWebSiteLink string
+	bot          *bot.Bot
+	pmailBaseUrl string
 }
 
 // NewTelegramBotSender 创建Telegram机器人发送器
@@ -33,21 +33,24 @@ func NewTelegramBotSender(cfg *config.Config) (*TelegramBotSender, error) {
 	if err != nil {
 		return nil, err
 	}
-	var link string
+	var baseurl string
 	if cfg.MainConfig.HttpsEnabled > 1 {
-		link = "http://" + cfg.MainConfig.WebDomain
+		baseurl = "http://" + cfg.MainConfig.WebDomain
 	} else {
-		link = "https://" + cfg.MainConfig.WebDomain
+		baseurl = "https://" + cfg.MainConfig.WebDomain
+	}
+	if strings.HasSuffix(baseurl, "/") {
+		baseurl = baseurl[:len(baseurl)-1]
 	}
 	return &TelegramBotSender{
-		bot:              bot,
-		pmailWebSiteLink: link,
+		bot:          bot,
+		pmailBaseUrl: baseurl,
 	}, nil
 }
 
 // SendNotification 发送通知消息
-func (s *TelegramBotSender) SendNotification(ctx context.Context, setting *model.PluginTelegramPushSettingModel, email *parsemail.Email) error {
-	msg, err := s.sendMessage(ctx, setting, email)
+func (s *TelegramBotSender) SendNotification(ctx context.Context, setting *model.PluginTelegramPushSettingModel, userEmailID int, email *parsemail.Email) error {
+	msg, err := s.sendMessage(ctx, setting, userEmailID, email)
 	if err != nil {
 		return err
 	}
@@ -109,14 +112,14 @@ func buildSendText(email *parsemail.Email, setting *model.PluginTelegramPushSett
 	return text
 }
 
-// buildPmailLinkButton 创建Pmail链接按钮
-func buildPmailLinkButton(pmailWebSiteLink string) *models.InlineKeyboardMarkup {
+// buildSendButton 创建Pmail链接按钮
+func buildSendButton(pmailBaseUrl string, userEmailID int) *models.InlineKeyboardMarkup {
 	return &models.InlineKeyboardMarkup{
 		InlineKeyboard: [][]models.InlineKeyboardButton{
 			{
 				{
 					Text: "查收邮件",
-					URL:  pmailWebSiteLink,
+					URL:  fmt.Sprintf("%s/#/detail/%d", pmailBaseUrl, userEmailID),
 				},
 			},
 		},
@@ -124,12 +127,13 @@ func buildPmailLinkButton(pmailWebSiteLink string) *models.InlineKeyboardMarkup 
 }
 
 // sendMessage 发送文本消息
-func (s *TelegramBotSender) sendMessage(ctx context.Context, setting *model.PluginTelegramPushSettingModel, email *parsemail.Email) (msg *models.Message, err error) {
+func (s *TelegramBotSender) sendMessage(ctx context.Context, setting *model.PluginTelegramPushSettingModel, userEmailID int, email *parsemail.Email) (msg *models.Message, err error) {
+
 	params := &bot.SendMessageParams{
 		ChatID:      setting.ChatID,
 		Text:        buildSendText(email, setting),
 		ParseMode:   models.ParseModeHTML,
-		ReplyMarkup: buildPmailLinkButton(s.pmailWebSiteLink),
+		ReplyMarkup: buildSendButton(s.pmailBaseUrl, userEmailID),
 		LinkPreviewOptions: &models.LinkPreviewOptions{
 			IsDisabled: &setting.DisableLinkPreview,
 		},

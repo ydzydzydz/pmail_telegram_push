@@ -105,7 +105,7 @@ func (h *PmailTelegramPushHook) ReceiveSaveAfter(ctx *context.Context, email *pa
 		// 从数据库查询用户邮件状态
 		status, err := h.userEmailService.GetUserEmailStatus(userEmail.UserID, userEmail.EmailID)
 		if err != nil {
-			logger.PluginLogger.Error().Err(err).Int64("email_message_id", email.MessageId).Msg("获取用户邮件状态失败")
+			logger.PluginLogger.Error().Err(err).Int("user_id", userEmail.UserID).Int("email_id", userEmail.EmailID).Msg("获取用户邮件状态失败")
 			continue
 		}
 		logger.PluginLogger.Info().Int("user_id", userEmail.UserID).Int("email_id", userEmail.EmailID).Str("status", status.String()).Msg("用户邮件状态查询成功")
@@ -117,7 +117,7 @@ func (h *PmailTelegramPushHook) ReceiveSaveAfter(ctx *context.Context, email *pa
 		// 发送通知
 		cctx, cancel := ccontext.WithTimeout(ccontext.Background(), time.Duration(h.pluginConfig.Timeout)*time.Second)
 		defer cancel()
-		if err = h.sender.SendNotification(cctx, setting, email); err != nil {
+		if err = h.sender.SendNotification(cctx, setting, userEmail.EmailID, email); err != nil {
 			logger.PluginLogger.Error().Err(err).Int64("email_message_id", email.MessageId).Msg("发送通知失败")
 			continue
 		}
