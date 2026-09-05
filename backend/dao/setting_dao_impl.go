@@ -1,8 +1,8 @@
 package dao
 
 import (
-	"github.com/ydzydzydz/pmail_telegram_push/hook/db/repository"
-	"github.com/ydzydzydz/pmail_telegram_push/hook/model"
+	"github.com/ydzydzydz/pmail_telegram_push/db/repository"
+	"github.com/ydzydzydz/pmail_telegram_push/model"
 	"xorm.io/xorm"
 )
 

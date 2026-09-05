@@ -5,7 +5,7 @@ import (
 	"os"
 
 	pconfig "github.com/Jinnrry/pmail/config"
-	"github.com/ydzydzydz/pmail_telegram_push/hook/logger"
+	"github.com/ydzydzydz/pmail_telegram_push/logger"
 )
 
 const (

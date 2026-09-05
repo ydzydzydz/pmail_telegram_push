@@ -9,8 +9,8 @@ import (
 	"time"
 
 	"github.com/go-telegram/bot"
-	"github.com/ydzydzydz/pmail_telegram_push/hook/config"
-	"github.com/ydzydzydz/pmail_telegram_push/hook/logger"
+	"github.com/ydzydzydz/pmail_telegram_push/config"
+	"github.com/ydzydzydz/pmail_telegram_push/logger"
 	"golang.org/x/net/proxy"
 )
 

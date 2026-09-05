@@ -32,8 +32,4 @@ export default defineConfig({
       '@': fileURLToPath(new URL('./src', import.meta.url))
     },
   },
-  build: {
-    // 输出目录
-    outDir: 'hook/dist',
-  },
 })

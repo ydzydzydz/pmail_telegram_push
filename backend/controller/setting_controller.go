@@ -4,10 +4,10 @@ import (
 	"encoding/json"
 	"strings"
 
-	"github.com/ydzydzydz/pmail_telegram_push/hook/controller/response"
-	"github.com/ydzydzydz/pmail_telegram_push/hook/logger"
-	"github.com/ydzydzydz/pmail_telegram_push/hook/model"
-	"github.com/ydzydzydz/pmail_telegram_push/hook/service"
+	"github.com/ydzydzydz/pmail_telegram_push/controller/response"
+	"github.com/ydzydzydz/pmail_telegram_push/logger"
+	"github.com/ydzydzydz/pmail_telegram_push/model"
+	"github.com/ydzydzydz/pmail_telegram_push/service"
 )
 
 type SettingController struct {

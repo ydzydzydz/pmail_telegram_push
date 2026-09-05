@@ -3,8 +3,8 @@ package service
 import (
 	"testing"
 
-	"github.com/ydzydzydz/pmail_telegram_push/hook/dao"
-	"github.com/ydzydzydz/pmail_telegram_push/hook/model"
+	"github.com/ydzydzydz/pmail_telegram_push/dao"
+	"github.com/ydzydzydz/pmail_telegram_push/model"
 	_ "modernc.org/sqlite"
 	"xorm.io/xorm"
 )

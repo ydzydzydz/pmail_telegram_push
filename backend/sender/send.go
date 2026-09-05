@@ -11,8 +11,8 @@ import (
 	"github.com/Jinnrry/pmail/dto/parsemail"
 	"github.com/go-telegram/bot"
 	"github.com/go-telegram/bot/models"
-	"github.com/ydzydzydz/pmail_telegram_push/hook/config"
-	"github.com/ydzydzydz/pmail_telegram_push/hook/model"
+	"github.com/ydzydzydz/pmail_telegram_push/config"
+	"github.com/ydzydzydz/pmail_telegram_push/model"
 )
 
 const (

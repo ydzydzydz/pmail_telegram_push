@@ -7,7 +7,7 @@ import (
 
 	"github.com/Jinnrry/pmail/dto/parsemail"
 	"github.com/microcosm-cc/bluemonday"
-	"github.com/ydzydzydz/pmail_telegram_push/hook/model"
+	"github.com/ydzydzydz/pmail_telegram_push/model"
 )
 
 var (

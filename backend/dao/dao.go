@@ -1,6 +1,6 @@
 package dao
 
-import "github.com/ydzydzydz/pmail_telegram_push/hook/model"
+import "github.com/ydzydzydz/pmail_telegram_push/model"
 
 // ISettingDao 是设置数据访问对象的接口
 type ISettingDao interface {

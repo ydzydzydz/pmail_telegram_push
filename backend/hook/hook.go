@@ -4,12 +4,12 @@ import (
 	"strings"
 	"time"
 
-	"github.com/ydzydzydz/pmail_telegram_push/hook/config"
-	"github.com/ydzydzydz/pmail_telegram_push/hook/controller"
-	"github.com/ydzydzydz/pmail_telegram_push/hook/db"
-	"github.com/ydzydzydz/pmail_telegram_push/hook/logger"
-	"github.com/ydzydzydz/pmail_telegram_push/hook/sender"
-	"github.com/ydzydzydz/pmail_telegram_push/hook/service"
+	"github.com/ydzydzydz/pmail_telegram_push/config"
+	"github.com/ydzydzydz/pmail_telegram_push/controller"
+	"github.com/ydzydzydz/pmail_telegram_push/db"
+	"github.com/ydzydzydz/pmail_telegram_push/logger"
+	"github.com/ydzydzydz/pmail_telegram_push/sender"
+	"github.com/ydzydzydz/pmail_telegram_push/service"
 
 	_ "embed"
 
@@ -76,7 +76,7 @@ func (h *PmailTelegramPushHook) ReceiveSaveAfter(ctx *context.Context, email *pa
 			continue
 		}
 		// 未发送或收件邮件不处理
-		if userEmail.Status != int8(StatusUnsentOrReceived) {
+		if UserEmailStatus(userEmail.Status) != StatusUnsentOrReceived {
 			continue
 		}
 		// 邮件ID不存在不处理

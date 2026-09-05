@@ -3,7 +3,7 @@ package response
 import (
 	"encoding/json"
 
-	"github.com/ydzydzydz/pmail_telegram_push/hook/logger"
+	"github.com/ydzydzydz/pmail_telegram_push/logger"
 )
 
 // Response 响应体
