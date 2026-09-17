@@ -1,0 +1,130 @@
+[tools]
+go = "1.25.5"
+node = "24"
+pnpm = "10"
+
+[env]
+CGO_ENABLED = "0"
+BINARY_NAME = "pmail_telegram_push"
+
+[settings]
+experimental = true
+
+# ---- 依赖 ----
+
+[deps.go]
+dir = "backend"
+
+[deps.pnpm]
+dir = "frontend"
+auto = true
+run = "pnpm install --frozen-lockfile"
+
+# ---- 构建 ----
+
+[tasks.build-frontend]
+description = "构建前端并拷贝产物到 backend/hook/dist"
+run = """
+(cd frontend && pnpm build) &&
+rm -rf backend/hook/dist &&
+mkdir -p backend/hook/dist &&
+cp -r frontend/dist/* backend/hook/dist/
+"""
+
+[tasks.build-backend]
+description = "构建后端二进制（需先执行 build-frontend，embed 依赖 dist）"
+run = "mkdir -p release && cd backend && go build -ldflags='-s -w' -o ../release/$BINARY_NAME ."
+
+[tasks.build]
+description = "完整构建（前端 + 后端）"
+depends = ["build-frontend"]
+run = "mkdir -p release && cd backend && go build -ldflags='-s -w' -o ../release/$BINARY_NAME ."
+
+[tasks.release]
+description = "构建当前平台发布产物"
+depends = ["build-frontend"]
+run = "mkdir -p release && cd backend && go build -ldflags='-s -w' -o ../release/$BINARY_NAME ."
+
+[tasks.release-all]
+description = "并行交叉编译全平台发布产物"
+depends = ["build-frontend"]
+run = """
+mkdir -p release
+pids=""
+for platform in linux/amd64 linux/arm64 darwin/amd64 darwin/arm64 windows/amd64 windows/arm64; do
+  goos=${platform%/*}
+  goarch=${platform#*/}
+  ext=""
+  if [ "$goos" = "windows" ]; then ext=".exe"; fi
+  output="${BINARY_NAME}_${goos}_${goarch}${ext}"
+  (
+    echo "  -> Building $output ..."
+    cd backend && CGO_ENABLED=0 GOOS=$goos GOARCH=$goarch go build -ldflags='-s -w' -o ../release/$output .
+  ) &
+  pids="$pids $!"
+done
+fail=0
+for pid in $pids; do
+  wait "$pid" || fail=1
+done
+if [ "$fail" -ne 0 ]; then
+  echo "Some builds failed." >&2
+  exit 1
+fi
+echo "All releases built successfully."
+"""
+
+[tasks.run]
+description = "构建并运行后端"
+depends = ["build"]
+run = "./release/$BINARY_NAME"
+
+[tasks.dev]
+description = "启动前端开发服务器"
+dir = "frontend"
+run = "pnpm dev"
+
+# ---- 质量 ----
+
+[tasks.test]
+description = "运行后端测试"
+dir = "backend"
+run = "go test ./... -count=1"
+
+[tasks.test-verbose]
+description = "运行后端测试（详细输出）"
+dir = "backend"
+run = "go test ./... -count=1 -v"
+
+[tasks.lint-backend]
+description = "后端 lint（go vet）"
+dir = "backend"
+run = "go vet ./..."
+
+[tasks.lint-frontend]
+description = "前端 lint"
+dir = "frontend"
+run = "pnpm lint"
+
+[tasks.lint]
+description = "运行 lint（前端 + 后端）"
+run = """
+cd backend && go vet ./... &&
+cd ../frontend && pnpm lint
+"""
+
+[tasks.format]
+description = "格式化代码（前端 + 后端）"
+run = """
+gofmt -s -w backend/ &&
+cd frontend && pnpm format
+"""
+
+# ---- 清理 ----
+
+[tasks.clean]
+description = "清理构建产物"
+run = """
+rm -rf release backend/hook/dist frontend/dist
+cd backend && go clean
+"""

@@ -13,20 +13,20 @@
 - **设置代理**：支持通过 HTTP 或 Socks5 代理发送请求。
 - **多用户支持**：每个用户可以独立配置自己的 Telegram 聊天 ID。
 
-## �🚀 安装
+## 🚀 安装
 
-### 使用 Makefile 安装
+### 使用 mise 安装
 
 1.  **安装依赖**：
 
     ```bash
-    make install-deps
+    mise run install-deps
     ```
 
-2.  **构建**（前端 + 后端，一步到位）：
+2.  **编译插件**：
 
     ```bash
-    make build
+    mise run build
     ```
 
 3.  **复制插件**：
@@ -80,8 +80,8 @@
 
 欢迎提交 Pull Request 或 Issue，为项目做出贡献！
 
-- 本地构建请优先使用 Makefile，保证与 CI 行为一致。
-- 提交代码前建议执行 `make lint` 和 `make test`。
+- 本地构建请优先使用 mise，保证与 CI 行为一致。
+- 提交代码前建议执行 `mise run lint` 和 `mise run test`。
 
 ## 📄 许可证
 
